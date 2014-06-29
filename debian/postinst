@@ -1,0 +1,65 @@
+#!/bin/sh
+
+set -e
+
+. /etc/default/openmediavault
+. /usr/share/openmediavault/scripts/helper-functions
+
+case "$1" in
+    configure)
+        if ! getent passwd subsonic >/dev/null 2>&1; then
+            echo "Adding subsonic user..."
+            useradd --create-home --groups users,audio --no-user-group --shell /usr/sbin/nologin subsonic
+            insserv -d subsonic
+        else
+            echo "subsonic user already exists."
+        fi
+
+        if [ -f "/var/run/subsonic.pid" ]; then
+            PID=$(cat /var/run/subsonic.pid);
+            kill -0 $PID 2>/dev/null;
+            if [ $? -eq 0 ]; then
+                kill -9 $PID;
+                rm -Rf /var/run/subsonic.pid
+            fi
+        fi
+
+        STABLE=`wget -q http://www.subsonic.org/pages/download.jsp -O - | \grep subsonic-[0-9].[0-9].deb | \sed 's/.*href=\"\(.*\)\".*/\1/' | sed 's/^[^-]*=//' | sed 's/\(^subsonic\-\)\(.*\)\(\.deb\)/\2/'`
+		#BETA=`wget -q http://www.subsonic.org/pages/download.jsp -O - | \grep subsonic-[0-9].[0-9].beta[0-9].deb | \sed 's/.*href=\"\(.*\)\".*/\1/' | sed 's/^[^-]*=//' | sed 's/\(^subsonic\-\)\(.*\)\(\.deb\)/\2/'`
+
+        if [ ! -d /var/subsonic ]; then
+            wget http://sourceforge.net/projects/subsonic/files/subsonic/${STABLE}/subsonic-${STABLE}.deb -O /tmp/subsonic-${STABLE}.deb
+            dpkg -i /tmp/subsonic-${STABLE}.deb
+            rm -Rf /tmp/subsonic-${STABLE}.deb
+        fi
+
+        if ! omv_config_exists "/config/services/subsonic"; then
+            echo "Initial configuration."
+            object="<enable>0</enable>"
+            object="${object}<showtab>0</showtab>"
+            object="${object}<update>0</update>"
+            object="${object}<bupdate>0</bupdate>"
+            object="${object}<port>4040</port>"
+            object="${object}<msg>None yet</msg>"
+            omv_config_add_element "/config/services" "subsonic" "${object}" true
+        fi
+
+        omv_install_fixperms
+
+        # Activate package triggers. These triggers are only set during the
+        # package installation.
+        dpkg-trigger update-fixperms
+        dpkg-trigger update-locale
+
+    ;;
+
+    abort-upgrade|abort-remove|abort-deconfigure)
+    ;;
+
+    *)
+        echo "postinst called with unknown argument" >&2
+        exit 1
+    ;;
+esac
+
+exit 0

@@ -1,0 +1,99 @@
+#!/bin/bash
+#
+set -e
+
+. /etc/default/openmediavault
+. /usr/share/openmediavault/scripts/helper-functions
+
+OMV_SUB_CONFIG="/etc/default/subsonic"
+OMV_SUB_USER=subsonic
+OMV_SUB_PLUGIN_XPATH=//services/subsonic
+
+update() {
+service subsonic stop
+ver1=`wget -q http://www.subsonic.org/pages/download.jsp -O - | \grep subsonic-[0-9].[0-9].deb | \sed 's/.*href=\"\(.*\)\".*/\1/' | sed 's/^[^-]*=//' | sed 's/\(^subsonic\-\)\(.*\)\(\.deb\)/\2/'`
+if [ "$ver1" == "" ]; then
+    exit
+fi
+wget http://sourceforge.net/projects/subsonic/files/subsonic/${STABLE}/subsonic-${STABLE}.deb -O /tmp/subsonic-${STABLE}.deb
+dpkg -i /tmp/subsonic-${STABLE}.deb
+rm -Rf /tmp/subsonic-${STABLE}.deb
+}
+
+bupdate() {
+service subsonic stop
+ver1=`wget -q http://www.subsonic.org/pages/download.jsp -O - | \grep subsonic-[0-9].[0-9].beta[0-9].deb | \sed 's/.*href=\"\(.*\)\".*/\1/' | sed 's/^[^-]*=//' | sed 's/\(^subsonic\-\)\(.*\)\(\.deb\)/\2/'`
+if [ "$ver1" == "" ]; then
+    exit
+fi
+wget http://sourceforge.net/projects/subsonic/files/subsonic/${STABLE}/subsonic-${STABLE}.deb -O /tmp/subsonic-${STABLE}.deb
+dpkg -i /tmp/subsonic-${STABLE}.deb
+rm -Rf /tmp/subsonic-${STABLE}.deb
+}
+
+getsettings() {
+ver1=`wget -q http://www.subsonic.org/pages/download.jsp -O - | \grep subsonic-[0-9].[0-9].deb | \sed 's/.*href=\"\(.*\)\".*/\1/' | sed 's/^[^-]*=//' | sed 's/\(^subsonic\-\)\(.*\)\(\.deb\)/\2/'`
+ver2=`grep -A 6 'Package: subsonic' /var/lib/dpkg/status  | grep ^Version: | sed 's/^[^-]*: //'`
+ver3=`wget -q http://www.subsonic.org/pages/download.jsp -O - | \grep subsonic-[0-9].[0-9].beta[0-9].deb | \sed 's/.*href=\"\(.*\)\".*/\1/' | sed 's/^[^-]*=//' | sed 's/\(^subsonic\-\)\(.*\)\(\.deb\)/\2/'`
+ver4="${ver3/beta/}"
+ver5="${ver2/beta/}"
+msg="Current version is $ver2,"
+#ver2=0.7.00 #use to test if button shows if values do not match
+if [ $ver1 -gt $ver5 ]; then
+    xmlstarlet ed -L -u "//services/subsonic/update" -v 1 -n ${OMV_CONFIG_FILE}
+    msg+=" there is a new update available."
+else
+    xmlstarlet ed -L -u "//services/subsonic/update" -v 0 -n ${OMV_CONFIG_FILE}
+    msg+=" there is no new update available."
+fi
+
+
+if [ $ver4 -gt $ver1 ]; then
+    if [ "$ver3" == "$ver2" ]; then
+        xmlstarlet ed -L -u "//services/subsonic/bupdate" -v 0 -n ${OMV_CONFIG_FILE}
+    else
+        xmlstarlet ed -L -u "//services/subsonic/bupdate" -v 1 -n ${OMV_CONFIG_FILE}
+        msg+=" $ver3 is available."
+    fi
+fi
+
+xmlstarlet ed -L -u "//services/subsonic/msg" -v "$msg" -n ${OMV_CONFIG_FILE}
+
+if [ "$(omv_config_get "//services/subsonic/enable")" != "1" ]; then
+    exit 0
+fi
+
+
+port=$(omv_config_get "${OMV_SUB_PLUGIN_XPATH}/port")
+
+# Create subsonic config file
+cat <<EOF > ${OMV_SUB_CONFIG}
+# Configuration for openmediavault-subsonic
+
+SUBSONIC_ARGS="--port=${port} --max-memory=150"
+SUBSONIC_USER=${OMV_SUB_USER}
+EOF
+
+
+chmod 644 ${SUB_CONFIG}
+
+
+
+}
+
+case "$2" in
+  update)
+    update
+    ;;
+  bupdate)
+    bupdate
+    ;;
+  getsettings)
+    getsettings
+    ;;
+  *)
+    exit 1
+esac
+
+SUBSONIC_ARGS="--port=4041 --max-memory=150"
+SUBSONIC_USER=subsonic

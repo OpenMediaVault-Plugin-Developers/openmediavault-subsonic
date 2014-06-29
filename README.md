@@ -1,4 +1,4 @@
 openmediavault-subsonic
-=======================
+======================
 
-openmediavault-subsonic
+subsonic plugin

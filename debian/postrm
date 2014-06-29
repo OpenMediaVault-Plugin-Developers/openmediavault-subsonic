@@ -1,0 +1,36 @@
+#!/bin/sh
+#
+set -e
+
+. /etc/default/openmediavault
+. /usr/share/openmediavault/scripts/helper-functions
+
+case "$1" in
+        purge)
+                if [ -f "/var/run/subsonic.pid" ]; then
+                        PID=$(cat /var/run/subsonic.pid);
+                        kill -0 $PID 2>/dev/null;
+                        if [ $? -eq 0 ]; then
+                                kill -9 $PID;
+                                rm -Rf /var/run/subsonic.pid
+                        fi
+                fi
+                
+                omv_config_delete "//services/subsonic"
+                userdel -rf subsonic
+
+                if [ -d /var/subsonic ]; then
+                    rm -Rf /var/subsonic
+                fi
+        ;;
+
+        remove|upgrade|failed-upgrade|abort-install|abort-upgrade|disappear)
+        ;;
+
+        *)
+        echo "postrm called with unknown argument '$1'" >&2
+        exit 1
+        ;;
+esac
+
+exit 0
