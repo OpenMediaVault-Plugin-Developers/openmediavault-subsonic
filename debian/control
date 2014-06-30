@@ -7,11 +7,11 @@ Standards-Version: 3.9.3
 
 Package: openmediavault-subsonic
 Architecture: all
-Depends: ${misc:Depends}, openmediavault (>= 0.6), openjdk-6-jre | openjdk-7-jre | openjdk-8-jre,
+Depends: ${misc:Depends}, openmediavault (>= 0.6.14), openjdk-8-jre | openjdk-7-jre | openjdk-6-jre,
  ffmpeg, lame
 Description: A web-based music streamer, jukebox and Podcast receiver
  Subsonic is a web-based music streamer, jukebox and Podcast receiver,
  providing access to your music collection wherever you are. Use it
  to share your music with friends, or to listen to your music while away
  from home.
- 
+
