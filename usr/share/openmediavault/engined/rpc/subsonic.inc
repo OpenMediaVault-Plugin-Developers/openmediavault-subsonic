@@ -137,7 +137,7 @@ class OMVRpcServiceSubsonic extends OMVRpcServiceAbstract {
             "update"    => array_boolval($params, "update"),
             "bupdate"   => array_boolval($params, "bupdate"),
             "port"      => $params["port"],
-            "msg"      => $params["msg"],
+            "msg"       => $params["msg"],
             "mntentref" => $params["mntentref"],
             "path"      => $params["path"],
         );
@@ -222,7 +222,7 @@ class OMVRpcServiceSubsonic extends OMVRpcServiceAbstract {
 
             $path = $xmlConfig->get("//services/subsonic/path");
 
-            $cmd = sprintf("tar --exclude='/home/sabnzbd/.sabnzbd/Downloads'  -zcvf %s /var/subsonic 2>&1", $path);
+            $cmd = sprintf("tar -zcvf %s /var/subsonic/subsonic.properties /var/subsonic/db 2>&1", $path);
             $this->exec($cmd, $output, $bgOutputFilename);
             $this->finalizeBgProcStatus($bgStatusFilename, $output);
             exit(0);
