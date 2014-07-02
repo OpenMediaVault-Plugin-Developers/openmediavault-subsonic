@@ -254,7 +254,7 @@ Ext.define("OMV.module.admin.service.subsonic.Settings", {
                     proxy : {
                         type : "rpc",
                         rpcData : {
-                            service : "Subsonic",
+                            service : "ShareMgmt",
                             method  : "getCandidates"
                         },
                         appendSortParams : false

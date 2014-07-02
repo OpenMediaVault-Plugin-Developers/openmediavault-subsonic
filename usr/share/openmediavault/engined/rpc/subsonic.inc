@@ -17,76 +17,105 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-require_once "openmediavault/object.inc";
 require_once "openmediavault/config.inc";
 require_once "openmediavault/error.inc";
-require_once "openmediavault/util.inc";
-require_once "openmediavault/rpcservice.inc";
 require_once "openmediavault/notify.inc";
+require_once "openmediavault/object.inc";
+require_once "openmediavault/rpcservice.inc";
+require_once "openmediavault/util.inc";
 require_once("openmediavault/product.inc");
 require_once("openmediavault/system.inc");
 
-class OMVRpcServiceSubsonic extends OMVRpcServiceAbstract {
-
-    public function getName() {
-        return "Subsonic";
-    }
-
-    private function getPluginName() {
+class OMVRpcServiceSubsonic extends OMVRpcServiceAbstract
+{
+    private function getPluginName()
+    {
         return strtolower($this->getName());
     }
 
-    private function getEventMessagePath() {
-        $path = sprintf("org.openmediavault.service.%s", $this->getPluginName());
-        return $path;
+    private function getEventMessagePath()
+    {
+        return sprintf("org.openmediavault.service.%s", $this->getPluginName());
     }
 
-    private function getXPath() {
-        $path = sprintf("//services/%s", $this->getPluginName());
-        return $path;
+    private function getEventMessagePathFork()
+    {
+        return sprintf("%s.forks.fork", $this->getEventMessagePath());
     }
 
-    public function startService() {
+    private function getXPath()
+    {
+        return sprintf("//services/%s", $this->getPluginName());
+    }
+
+    private function getXPathForks()
+    {
+        returnsprintf("%s/forks", $this->getXPath());
+    }
+
+    private function getXPathFork()
+    {
+        return sprintf("%s/fork", $this->getXPathForks());
+    }
+
+    public function getName()
+    {
+        return "Subsonic";
+    }
+
+    public function startService()
+    {
         global $xmlConfig;
 
         $object = $xmlConfig->get($this->getXPath());
 
-        if (is_null($object))
-            throw new OMVException(OMVErrorMsg::E_CONFIG_GET_OBJECT_FAILED,
-                $this->getXPath());
+        if (is_null($object)) {
+            throw new OMVException(
+                OMVErrorMsg::E_CONFIG_GET_OBJECT_FAILED,
+                $this->getXPath()
+            );
+        }
 
-        if (!boolval($object["enable"]))
+        if (!boolval($object["enable"])) {
             return;
+        }
 
         $initd = new OMVSysVInitScript($this->getPluginName(), true);
         $initd->exec();
     }
 
-    public function stopService() {
+    public function stopService()
+    {
         $initd = new OMVSysVInitScript($this->getPluginName());
         $initd->exec();
     }
 
-    public function initialize() {
+    public function initialize()
+    {
         $this->registerMethod("getSettings");
         $this->registerMethod("setSettings");
         $this->registerMethod('doUpdateSUB');
         $this->registerMethod('doUpdateSUBB');
 
         $this->registerMethod('doBackup');
-        $this->registerMethod('doRestore');
-        $this->registerMethod('getCandidates');
+        $this->registerMethod("doRestore");
     }
 
-    function getSettings($params, $context) {
+    public function getSettings($params, $context)
+    {
         $this->exec("omv-mkconf subsonic getsettings");
         global $xmlConfig;
 
-        $this->validateMethodContext($context, array( "role" => OMV_ROLE_ADMINISTRATOR ));
+        $this->validateMethodContext($context, array("role" => OMV_ROLE_ADMINISTRATOR));
 
         $object = $xmlConfig->get($this->getXPath());
-        if(is_null($object))
-            throw new OMVException(OMVErrorMsg::E_CONFIG_GET_OBJECT_FAILED, $xpath);
+
+        if (is_null($object)) {
+            throw new OMVException(
+                OMVErrorMsg::E_CONFIG_GET_OBJECT_FAILED,
+                $xpath
+            );
+        }
 
         $object["enable"]  = boolval($object["enable"]);
         $object["showtab"] = boolval($object["showtab"]);
@@ -97,25 +126,28 @@ class OMVRpcServiceSubsonic extends OMVRpcServiceAbstract {
         return $object;
     }
 
-    function setSettings($params, $context) {
+    public function setSettings($params, $context)
+    {
         global $xmlConfig;
 
         $this->validateMethodContext($context, array("role" => OMV_ROLE_ADMINISTRATOR));
 
-        $this->validateMethodParams($params, '{
-            "type"       : "object",
-            "properties" : {
-                "enable"    : { "type" : "boolean" },
-                "showtab"   : { "type" : "boolean" },
-                "update"    : { "type" : "boolean" },
-                "bupdate"   : { "type" : "boolean" },
-                "port"      : { "type" : "integer","minimum":1024,"maximum":65535},
-                "mntentref" : { ' . $GLOBALS['OMV_JSONSCHEMA_UUID_NONE'] . ' },
-                "msg"       : { "type" : "string", "optional" : true },
-                "path"      : { "type" : "string", "optional" : true }
-            }
-        }');
-
+        $this->validateMethodParams(
+            $params,
+            '{
+                "type"       : "object",
+                "properties" : {
+                    "enable"    : { "type" : "boolean" },
+                    "showtab"   : { "type" : "boolean" },
+                    "update"    : { "type" : "boolean" },
+                    "bupdate"   : { "type" : "boolean" },
+                    "port"      : { "type" : "integer","minimum":1024,"maximum":65535},
+                    "mntentref" : { ' . $GLOBALS['OMV_JSONSCHEMA_UUID_NONE'] . ' },
+                    "msg"       : { "type" : "string", "optional" : true },
+                    "path"      : { "type" : "string", "optional" : true }
+                }
+            }'
+        );
 
         $xpath = sprintf("//system/fstab/mntent[uuid='%s']", $params['mntentref']);
         $deviceDir = $xmlConfig->get($xpath);
@@ -128,8 +160,13 @@ class OMVRpcServiceSubsonic extends OMVRpcServiceAbstract {
 
         // Get existing configuration object
         $oldObject = $xmlConfig->get($this->getXPath());
-        if (is_null($oldObject))
-           throw new OMVException(OMVErrorMsg::E_CONFIG_GET_OBJECT_FAILED, $xpath);
+
+        if (is_null($oldObject)) {
+            throw new OMVException(
+                OMVErrorMsg::E_CONFIG_GET_OBJECT_FAILED,
+                $xpath
+            );
+        }
 
         $object = array(
             "enable"    => array_boolval($params, "enable"),
@@ -142,8 +179,12 @@ class OMVRpcServiceSubsonic extends OMVRpcServiceAbstract {
             "path"      => $params["path"],
         );
 
-        if(false === $xmlConfig->replace($this->getXPath(), $object))
-            throw new OMVException(OMVErrorMsg::E_CONFIG_SET_OBJECT_FAILED, $this->getXPath());
+        if (false === $xmlConfig->replace($this->getXPath(), $object)) {
+            throw new OMVException(
+                OMVErrorMsg::E_CONFIG_SET_OBJECT_FAILED,
+                $this->getXPath()
+            );
+        }
 
         $dispatcher = &OMVNotifyDispatcher::getInstance();
         $dispatcher->notify(OMV_NOTIFY_MODIFY, $this->getEventMessagePath(), $object);
@@ -151,58 +192,13 @@ class OMVRpcServiceSubsonic extends OMVRpcServiceAbstract {
         return $object;
     }
 
-    public function getCandidates($params, $context) {
+    public function doBackup($params, $context)
+    {
         global $xmlConfig;
-
-        // Validate the RPC caller context.
-        $this->validateMethodContext($context, array( "role" => OMV_ROLE_ADMINISTRATOR ));
-
-        // Get a list of mount points, except bind mounts.
-        $xpath = "//system/fstab/mntent[not(contains(opts,'bind'))]";
-        $objects = $xmlConfig->getList($xpath);
-        if(is_null($objects)) {
-            throw new OMVException(OMVErrorMsg::E_CONFIG_GET_OBJECT_FAILED, $xpath);
-        }
-
-        // Get the filesystem details for each mount point.
-        $result = array();
-        foreach($objects as $objectk => $objectv) {
-            $fs = new OMVFilesystem($objectv['fsname']);
-            if(!$fs->exists())
-                continue;
-
-            // Skip the filesystems that are not mounted at the moment.
-            if(FALSE === $fs->isMounted())
-                continue;
-
-            // Get some filesystem details.
-            $devicefile = $fs->getDeviceFile();
-            $label = $fs->getLabel();
-
-            // Prepare result object.
-            $object = array(
-                "uuid"        => $objectv['uuid'],
-                "devicefile"  => $devicefile,
-                "description" => !empty($label) ? $label : $devicefile
-            );
-
-            // Get some more filesystem details if possible.
-            if(FALSE !== ($fsStats = $fs->getStatistics())) {
-                $object['description'] = sprintf(
-                    gettext("%s (%s available)"), $object['description'],
-                    binary_format($fsStats['available']));
-            }
-
-            $result[] = $object;
-        }
-        return $result;
-    }
-
-    public function doBackup($params, $context) {
-        global $xmlConfig;
-		
-        if (! file_exists("/var/subsonic/subsonic.properties"))
+        //Subsonic needs to have run once to generate its settings. Check if this is true
+        if (! file_exists("/var/subsonic/subsonic.properties")) {
             throw new OMVException(OMVErrorMsg::E_EXEC_MISC, "No settings folder found!");
+        }
 
         // Validate the RPC caller context.
         $this->validateMethodContext($context, array( "role" => OMV_ROLE_ADMINISTRATOR ));
@@ -210,7 +206,9 @@ class OMVRpcServiceSubsonic extends OMVRpcServiceAbstract {
         // Create a background process.
         $bgStatusFilename = $this->createBgProcStatus();
         $pid = $this->fork();
-        if($pid > 0) { // Parent process.
+
+        // Parent process.
+        if ($pid > 0) {
             $this->initializeBgProcStatus($bgStatusFilename, $pid);
             return $bgStatusFilename;
         }
@@ -232,7 +230,8 @@ class OMVRpcServiceSubsonic extends OMVRpcServiceAbstract {
         }
     }
 
-    public function doRestore($params, $context) {
+    public function doRestore($params, $context)
+    {
         global $xmlConfig;
 
         // Validate the RPC caller context.
@@ -241,7 +240,7 @@ class OMVRpcServiceSubsonic extends OMVRpcServiceAbstract {
         // Get the configuration object.
         $path = $xmlConfig->get("//services/subsonic/path");
         $dirPath = "/var/subsonic";
-        if(is_null($path)) {
+        if (is_null($path)) {
             throw new OMVException(OMVErrorMsg::E_CONFIG_GET_OBJECT_FAILED, $xpath);
         }
 
@@ -280,18 +279,24 @@ class OMVRpcServiceSubsonic extends OMVRpcServiceAbstract {
         }
     }
 
-    public function doUpdateSUB($params, $context) {
+    public function doUpdateSUB($params, $context)
+    {
         $cmd = "omv-mkconf subsonic update 2>&1";
-        if(0 !== $this->exec($cmd, $output))
+        if(0 !== $this->exec($cmd, $output)) {
            throw new OMVException(OMVErrorMsg::E_EXEC_FAILED, $cmd, implode("\n", $output));
+        }
+
         $dispatcher = &OMVNotifyDispatcher::getInstance();
         $dispatcher->notify(OMV_NOTIFY_MODIFY, $this->getEventMessagePath(), $object);
     }
 
-    public function doUpdateSUBB($params, $context) {
+    public function doUpdateSUBB($params, $context)
+    {
         $cmd = "omv-mkconf subsonic bupdate 2>&1";
-        if(0 !== $this->exec($cmd, $output))
+        if(0 !== $this->exec($cmd, $output)) {
            throw new OMVException(OMVErrorMsg::E_EXEC_FAILED, $cmd, implode("\n", $output));
+        }
+
         $dispatcher = &OMVNotifyDispatcher::getInstance();
         $dispatcher->notify(OMV_NOTIFY_MODIFY, $this->getEventMessagePath(), $object);
     }
