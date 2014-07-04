@@ -64,7 +64,15 @@ class OMVRpcServiceSubsonic extends OMVRpcServiceAbstract
 
     public function getSettings($params, $context)
     {
-        $this->exec("omv-mkconf subsonic getsettings");
+        $cmd = sprintf("omv-mkconf %s getsettings", $this->getPluginName());
+
+        if (0 !== $this->exec($cmd, $output)) {
+            throw new OMVException(
+                OMVErrorMsg::E_EXEC_FAILED,
+                $cmd,
+                implode("\n", $output)
+            );
+        }
 
         global $xmlConfig;
 
@@ -285,24 +293,42 @@ class OMVRpcServiceSubsonic extends OMVRpcServiceAbstract
 
     public function doUpdateSUB($params, $context)
     {
-        $cmd = "omv-mkconf subsonic update 2>&1";
-        if(0 !== $this->exec($cmd, $output)) {
-           throw new OMVException(OMVErrorMsg::E_EXEC_FAILED, $cmd, implode("\n", $output));
+        $cmd = sprintf("omv-mkconf %s update 2>&1", $this->getPluginName());
+
+        if (0 !== $this->exec($cmd, $output)) {
+            throw new OMVException(
+                OMVErrorMsg::E_EXEC_FAILED,
+                $cmd,
+                implode("\n", $output)
+            );
         }
 
         $dispatcher = &OMVNotifyDispatcher::getInstance();
-        $dispatcher->notify(OMV_NOTIFY_MODIFY, $this->getEventMessagePath(), $object);
+        $dispatcher->notify(
+            OMV_NOTIFY_MODIFY,
+            $this->getEventMessagePath(),
+            $object
+        );
     }
 
     public function doUpdateSUBB($params, $context)
     {
-        $cmd = "omv-mkconf subsonic bupdate 2>&1";
-        if(0 !== $this->exec($cmd, $output)) {
-           throw new OMVException(OMVErrorMsg::E_EXEC_FAILED, $cmd, implode("\n", $output));
+        $cmd = sprintf("omv-mkconf %s bupdate 2>&1", $this->getPluginName());
+
+        if (0 !== $this->exec($cmd, $output)) {
+            throw new OMVException(
+                OMVErrorMsg::E_EXEC_FAILED,
+                $cmd,
+                implode("\n", $output)
+            );
         }
 
         $dispatcher = &OMVNotifyDispatcher::getInstance();
-        $dispatcher->notify(OMV_NOTIFY_MODIFY, $this->getEventMessagePath(), $object);
+        $dispatcher->notify(
+            OMV_NOTIFY_MODIFY,
+            $this->getEventMessagePath(),
+            $object
+        );
     }
 }
 

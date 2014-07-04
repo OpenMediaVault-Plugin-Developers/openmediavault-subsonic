@@ -33,13 +33,11 @@ class OMVModuleSubsonic extends OMVModuleServiceAbstract implements
     }
 
     private function getEventMessagePath() {
-        $path = sprintf("org.openmediavault.service.%s", $this->getPluginName());
-        return $path;
+        return sprintf("org.openmediavault.service.%s", $this->getPluginName());
     }
 
     private function getXPath() {
-        $path = sprintf("//services/%s", $this->getPluginName());
-        return $path;
+        return sprintf("//services/%s", $this->getPluginName());
     }
 
     public function getName() {
