@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Copyright (C)      2013 OpenMediaVault Plugin Developers
+ * Copyright (C) 2013-2014 OpenMediaVault Plugin Developers
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,18 +17,16 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-require_once "openmediavault/module.inc";
 require_once "openmediavault/config.inc";
 require_once "openmediavault/error.inc";
-require_once "openmediavault/util.inc";
 require_once "openmediavault/initscript.inc";
+require_once "openmediavault/module.inc";
+require_once "openmediavault/util.inc";
 
-class OMVModuleSubsonic extends OMVModuleServiceAbstract
-    implements OMVINotifyListener, OMVIModuleServiceStatus {
-
-    public function getName() {
-        return "Subsonic";
-    }
+class OMVModuleSubsonic extends OMVModuleServiceAbstract implements
+    OMVINotifyListener,
+    OMVIModuleServiceStatus
+{
 
     private function getPluginName() {
         return strtolower($this->getName());
@@ -39,27 +37,26 @@ class OMVModuleSubsonic extends OMVModuleServiceAbstract
         return $path;
     }
 
-
     private function getXPath() {
         $path = sprintf("//services/%s", $this->getPluginName());
         return $path;
     }
 
-    //public function applyConfig() {
-    //    $cmd = sprintf("omv-mkconf %s 2>&1", $this->getPluginName());
-
-    //    if (0 !== $this->exec($cmd, $output))
-    //        throw new OMVException(OMVErrorMsg::E_EXEC_FAILED, $cmd, implode("\n", $output));
-    //}
+    public function getName() {
+        return "Subsonic";
+    }
 
     public function getStatus() {
         global $xmlConfig;
 
         $object = $xmlConfig->get($this->getXPath());
 
-        if (is_null($object))
-            throw new OMVException(OMVErrorMsg::E_CONFIG_GET_OBJECT_FAILED,
-                $this->getXPath());
+        if (is_null($object)) {
+            throw new OMVException(
+                OMVErrorMsg::E_CONFIG_GET_OBJECT_FAILED,
+                $this->getXPath()
+            );
+        }
 
         $initd = new OMVSysVInitScript($this->getPluginName());
 
@@ -76,9 +73,12 @@ class OMVModuleSubsonic extends OMVModuleServiceAbstract
 
         $object = $xmlConfig->get($this->getXPath());
 
-        if (is_null($object))
-            throw new OMVException(OMVErrorMsg::E_CONFIG_GET_OBJECT_FAILED,
-                $this->getXPath());
+        if (is_null($object)) {
+            throw new OMVException(
+                OMVErrorMsg::E_CONFIG_GET_OBJECT_FAILED,
+                $this->getXPath()
+            );
+        }
 
         if (!boolval($object["enable"]))
             return;

@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Copyright (C) 2013 OpenMediaVault Plugin Developers
+ * Copyright (C) 2013-2014 OpenMediaVault Plugin Developers
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,13 +21,16 @@ require_once "openmediavault/config.inc";
 require_once "openmediavault/error.inc";
 require_once "openmediavault/notify.inc";
 require_once "openmediavault/object.inc";
+require_once "openmediavault/product.inc";
 require_once "openmediavault/rpcservice.inc";
+require_once "openmediavault/system.inc";
 require_once "openmediavault/util.inc";
-require_once("openmediavault/product.inc");
-require_once("openmediavault/system.inc");
 
 class OMVRpcServiceSubsonic extends OMVRpcServiceAbstract
 {
+    private $subsonicSettingsDir = "/var/subsonic/";
+    private $subsonicSettingsFile = "/var/subsonic/subsonic.properties";
+
     private function getPluginName()
     {
         return strtolower($this->getName());
@@ -38,56 +41,14 @@ class OMVRpcServiceSubsonic extends OMVRpcServiceAbstract
         return sprintf("org.openmediavault.service.%s", $this->getPluginName());
     }
 
-    private function getEventMessagePathFork()
-    {
-        return sprintf("%s.forks.fork", $this->getEventMessagePath());
-    }
-
     private function getXPath()
     {
         return sprintf("//services/%s", $this->getPluginName());
     }
 
-    private function getXPathForks()
-    {
-        returnsprintf("%s/forks", $this->getXPath());
-    }
-
-    private function getXPathFork()
-    {
-        return sprintf("%s/fork", $this->getXPathForks());
-    }
-
     public function getName()
     {
         return "Subsonic";
-    }
-
-    public function startService()
-    {
-        global $xmlConfig;
-
-        $object = $xmlConfig->get($this->getXPath());
-
-        if (is_null($object)) {
-            throw new OMVException(
-                OMVErrorMsg::E_CONFIG_GET_OBJECT_FAILED,
-                $this->getXPath()
-            );
-        }
-
-        if (!boolval($object["enable"])) {
-            return;
-        }
-
-        $initd = new OMVSysVInitScript($this->getPluginName(), true);
-        $initd->exec();
-    }
-
-    public function stopService()
-    {
-        $initd = new OMVSysVInitScript($this->getPluginName());
-        $initd->exec();
     }
 
     public function initialize()
@@ -104,16 +65,19 @@ class OMVRpcServiceSubsonic extends OMVRpcServiceAbstract
     public function getSettings($params, $context)
     {
         $this->exec("omv-mkconf subsonic getsettings");
+
         global $xmlConfig;
 
-        $this->validateMethodContext($context, array("role" => OMV_ROLE_ADMINISTRATOR));
+        $this->validateMethodContext($context, array(
+            "role" => OMV_ROLE_ADMINISTRATOR
+        ));
 
         $object = $xmlConfig->get($this->getXPath());
 
         if (is_null($object)) {
             throw new OMVException(
                 OMVErrorMsg::E_CONFIG_GET_OBJECT_FAILED,
-                $xpath
+                $XPath
             );
         }
 
@@ -130,7 +94,9 @@ class OMVRpcServiceSubsonic extends OMVRpcServiceAbstract
     {
         global $xmlConfig;
 
-        $this->validateMethodContext($context, array("role" => OMV_ROLE_ADMINISTRATOR));
+        $this->validateMethodContext($context, array(
+            "role" => OMV_ROLE_ADMINISTRATOR
+        ));
 
         $this->validateMethodParams(
             $params,
@@ -164,7 +130,7 @@ class OMVRpcServiceSubsonic extends OMVRpcServiceAbstract
         if (is_null($oldObject)) {
             throw new OMVException(
                 OMVErrorMsg::E_CONFIG_GET_OBJECT_FAILED,
-                $xpath
+                $XPath
             );
         }
 
@@ -187,7 +153,11 @@ class OMVRpcServiceSubsonic extends OMVRpcServiceAbstract
         }
 
         $dispatcher = &OMVNotifyDispatcher::getInstance();
-        $dispatcher->notify(OMV_NOTIFY_MODIFY, $this->getEventMessagePath(), $object);
+        $dispatcher->notify(
+            OMV_NOTIFY_MODIFY,
+            $this->getEventMessagePath(),
+            $object
+        );
 
         return $object;
     }
@@ -195,13 +165,20 @@ class OMVRpcServiceSubsonic extends OMVRpcServiceAbstract
     public function doBackup($params, $context)
     {
         global $xmlConfig;
-        //Subsonic needs to have run once to generate its settings. Check if this is true
-        if (! file_exists("/var/subsonic/subsonic.properties")) {
-            throw new OMVException(OMVErrorMsg::E_EXEC_MISC, "No settings folder found!");
+
+        // Subsonic needs to have run once to generate its
+        // settings. Check if this is true
+        if (!file_exists($this->subsonicSettingsFile)) {
+            throw new OMVException(
+                OMVErrorMsg::E_EXEC_MISC,
+                "No settings folder found!"
+            );
         }
 
         // Validate the RPC caller context.
-        $this->validateMethodContext($context, array( "role" => OMV_ROLE_ADMINISTRATOR ));
+        $this->validateMethodContext($context, array(
+            "role" => OMV_ROLE_ADMINISTRATOR
+        ));
 
         // Create a background process.
         $bgStatusFilename = $this->createBgProcStatus();
@@ -216,11 +193,22 @@ class OMVRpcServiceSubsonic extends OMVRpcServiceAbstract
         // Child process.
         try {
             $bgOutputFilename = $this->createBgProcOutput();
-            $this->updateBgProcStatus($bgStatusFilename, "outputfilename", $bgOutputFilename);
+            $this->updateBgProcStatus(
+                $bgStatusFilename,
+                "outputfilename",
+                $bgOutputFilename
+            );
 
-            $path = $xmlConfig->get("//services/subsonic/path");
+            // Get the configuration object.
+            $xPath = sprintf("%s/path", $this->getXPath());
+            $backupPath = $xmlConfig->get($xPath);
 
-            $cmd = sprintf("tar -zcvf %s /var/subsonic/subsonic.properties /var/subsonic/db 2>&1", $path);
+            $cmd = sprintf(
+                "tar -zcvPf %s %s 2>&1",
+                $backupPath,
+                $this->subsonicSettingsDir
+            );
+
             $this->exec($cmd, $output, $bgOutputFilename);
             $this->finalizeBgProcStatus($bgStatusFilename, $output);
             exit(0);
@@ -235,17 +223,23 @@ class OMVRpcServiceSubsonic extends OMVRpcServiceAbstract
         global $xmlConfig;
 
         // Validate the RPC caller context.
-        $this->validateMethodContext($context, array( "role" => OMV_ROLE_ADMINISTRATOR ));
+        $this->validateMethodContext($context, array(
+            "role" => OMV_ROLE_ADMINISTRATOR
+        ));
 
         // Get the configuration object.
-        $path = $xmlConfig->get("//services/subsonic/path");
-        $dirPath = "/var/subsonic";
-        if (is_null($path)) {
-            throw new OMVException(OMVErrorMsg::E_CONFIG_GET_OBJECT_FAILED, $xpath);
+        $xPath = sprintf("%s/path", $this->getXPath());
+        $backupPath = $xmlConfig->get($xPath);
+
+        if (is_null($backupPath)) {
+            throw new OMVException(
+                OMVErrorMsg::E_CONFIG_GET_OBJECT_FAILED,
+                $xPath
+            );
         }
 
         // Check if backup is present.
-        if (file_exists($path)) {
+        if (file_exists($backupPath)) {
             // Create a background process.
             $bgStatusFilename = $this->createBgProcStatus();
             $pid = $this->fork();
@@ -254,24 +248,34 @@ class OMVRpcServiceSubsonic extends OMVRpcServiceAbstract
                 return $bgStatusFilename;
             }
 
-            // Delete current folder
-            system("rm -rf ".escapeshellarg($dirPath));
+            // Delete current settings folder
+            rmdir($this->subsonicSettingsDir);
+
+            // Get the Subsonic module
+            $moduleMgr = &OMVModuleMgr::getInstance();
+            $subsonicModule = $moduleMgr->getModule($this->getName());
+
+            // Child process.
 
 
             try {
-                $this->stopService();
+                $subsonicModule->stopService();
                 $bgOutputFilename = $this->createBgProcOutput();
-                $this->updateBgProcStatus($bgStatusFilename, "outputfilename", $bgOutputFilename);
+                $this->updateBgProcStatus(
+                    $bgStatusFilename,
+                    "outputfilename",
+                    $bgOutputFilename
+                );
 
-                $cmd = sprintf("tar -zxvf %s -C / 2>&1", $path);
+                $cmd = sprintf("tar -zxvf %s -C / 2>&1", $backupPath);
 
                 $this->exec($cmd, $output, $bgOutputFilename);
                 $this->finalizeBgProcStatus($bgStatusFilename, $output);
-                $this->startService();
+                $subsonicModule->startService();
                 exit(0);
             } catch(Exception $e) {
                 $this->finalizeBgProcStatus($bgStatusFilename, "", $e);
-                $this->startService();
+                $subsonicModule->startService();
                 exit(1);
             }
         } else {
