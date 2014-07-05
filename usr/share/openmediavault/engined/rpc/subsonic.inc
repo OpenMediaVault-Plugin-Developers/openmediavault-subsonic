@@ -85,7 +85,7 @@ class OMVRpcServiceSubsonic extends OMVRpcServiceAbstract
         if (is_null($object)) {
             throw new OMVException(
                 OMVErrorMsg::E_CONFIG_GET_OBJECT_FAILED,
-                $XPath
+                $this->getXPath()
             );
         }
 
@@ -93,7 +93,7 @@ class OMVRpcServiceSubsonic extends OMVRpcServiceAbstract
         $object["showtab"] = boolval($object["showtab"]);
         $object["update"]  = boolval($object["update"]);
         $object["bupdate"] = boolval($object["bupdate"]);
-        $object['port']    = intval($object['port']);
+        $object["port"]    = intval($object["port"]);
 
         return $object;
     }
@@ -123,13 +123,13 @@ class OMVRpcServiceSubsonic extends OMVRpcServiceAbstract
             }'
         );
 
-        $xpath = sprintf("//system/fstab/mntent[uuid='%s']", $params['mntentref']);
-        $deviceDir = $xmlConfig->get($xpath);
-        $deviceDir = $deviceDir['dir'];
+        $xPath = sprintf("//system/fstab/mntent[uuid='%s']", $params["mntentref"]);
+        $deviceDir = $xmlConfig->get($xPath);
+        $deviceDir = $deviceDir["dir"];
 
 
-        $backupPath = "{$deviceDir}/SUBbackup";
-        $params['path'] = $backupPath;
+        backupPath = "$deviceDir/SUBbackup";
+        $params["path"] = $backupPath;
 
 
         // Get existing configuration object
@@ -138,7 +138,7 @@ class OMVRpcServiceSubsonic extends OMVRpcServiceAbstract
         if (is_null($oldObject)) {
             throw new OMVException(
                 OMVErrorMsg::E_CONFIG_GET_OBJECT_FAILED,
-                $XPath
+                $this->getXPath()
             );
         }
 
@@ -220,7 +220,7 @@ class OMVRpcServiceSubsonic extends OMVRpcServiceAbstract
             $this->exec($cmd, $output, $bgOutputFilename);
             $this->finalizeBgProcStatus($bgStatusFilename, $output);
             exit(0);
-        } catch(Exception $e) {
+        } catch (Exception $e) {
             $this->finalizeBgProcStatus($bgStatusFilename, "", $e);
             exit(1);
         }
@@ -251,7 +251,9 @@ class OMVRpcServiceSubsonic extends OMVRpcServiceAbstract
             // Create a background process.
             $bgStatusFilename = $this->createBgProcStatus();
             $pid = $this->fork();
-            if($pid > 0) { // Parent process.
+
+            // Parent process.
+            if ($pid > 0) {
                 $this->initializeBgProcStatus($bgStatusFilename, $pid);
                 return $bgStatusFilename;
             }
@@ -281,7 +283,7 @@ class OMVRpcServiceSubsonic extends OMVRpcServiceAbstract
                 $this->finalizeBgProcStatus($bgStatusFilename, $output);
                 $subsonicModule->startService();
                 exit(0);
-            } catch(Exception $e) {
+            } catch (Exception $e) {
                 $this->finalizeBgProcStatus($bgStatusFilename, "", $e);
                 $subsonicModule->startService();
                 exit(1);
@@ -293,46 +295,97 @@ class OMVRpcServiceSubsonic extends OMVRpcServiceAbstract
 
     public function doUpdateSUB($params, $context)
     {
-        $cmd = sprintf("omv-mkconf %s update 2>&1", $this->getPluginName());
+        global $xmlConfig;
 
-        if (0 !== $this->exec($cmd, $output)) {
-            throw new OMVException(
-                OMVErrorMsg::E_EXEC_FAILED,
-                $cmd,
-                implode("\n", $output)
-            );
+        // Validate the RPC caller context.
+        $this->validateMethodContext($context, array(
+            "role" => OMV_ROLE_ADMINISTRATOR
+        ));
+
+        // Get the Subsonic module
+        $moduleMgr = &OMVModuleMgr::getInstance();
+        $subsonicModule = $moduleMgr->getModule($this->getName());
+
+        // Create a background process.
+        $bgStatusFilename = $this->createBgProcStatus();
+        $pid = $this->fork();
+
+        // Parent process.
+        if ($pid > 0) {
+            $this->initializeBgProcStatus($bgStatusFilename, $pid);
+            return $bgStatusFilename;
         }
 
-        $dispatcher = &OMVNotifyDispatcher::getInstance();
-        $dispatcher->notify(
-            OMV_NOTIFY_MODIFY,
-            $this->getEventMessagePath(),
-            $object
-        );
+        // Child process.
+        try {
+            $subsonicModule->stopService();
+            $bgOutputFilename = $this->createBgProcOutput();
+            $this->updateBgProcStatus(
+                $bgStatusFilename,
+                "outputfilename",
+                $bgOutputFilename
+            );
+
+            $cmd = sprintf("omv-mkconf %s update 2>&1", $this->getPluginName());
+
+            $this->exec($cmd, $output, $bgOutputFilename);
+            $this->finalizeBgProcStatus($bgStatusFilename, $output);
+            $subsonicModule->startService();
+            exit(0);
+        } catch(Exception $e) {
+            $this->finalizeBgProcStatus($bgStatusFilename, "", $e);
+            $subsonicModule->startService();
+            exit(1);
+        }
     }
 
     public function doUpdateSUBB($params, $context)
     {
-        $cmd = sprintf("omv-mkconf %s bupdate 2>&1", $this->getPluginName());
+        global $xmlConfig;
 
-        if (0 !== $this->exec($cmd, $output)) {
-            throw new OMVException(
-                OMVErrorMsg::E_EXEC_FAILED,
-                $cmd,
-                implode("\n", $output)
-            );
+        // Validate the RPC caller context.
+        $this->validateMethodContext($context, array(
+            "role" => OMV_ROLE_ADMINISTRATOR
+        ));
+
+        // Get the Subsonic module
+        $moduleMgr = &OMVModuleMgr::getInstance();
+        $subsonicModule = $moduleMgr->getModule($this->getName());
+
+        // Create a background process.
+        $bgStatusFilename = $this->createBgProcStatus();
+        $pid = $this->fork();
+
+        // Parent process.
+        if ($pid > 0) {
+            $this->initializeBgProcStatus($bgStatusFilename, $pid);
+            return $bgStatusFilename;
         }
 
-        $dispatcher = &OMVNotifyDispatcher::getInstance();
-        $dispatcher->notify(
-            OMV_NOTIFY_MODIFY,
-            $this->getEventMessagePath(),
-            $object
-        );
+        // Child process.
+        try {
+            $subsonicModule->stopService();
+            $bgOutputFilename = $this->createBgProcOutput();
+            $this->updateBgProcStatus(
+                $bgStatusFilename,
+                "outputfilename",
+                $bgOutputFilename
+            );
+
+            $cmd = sprintf("omv-mkconf %s bupdate 2>&1", $this->getPluginName());
+
+            $this->exec($cmd, $output, $bgOutputFilename);
+            $this->finalizeBgProcStatus($bgStatusFilename, $output);
+            $subsonicModule->startService();
+            exit(0);
+        } catch(Exception $e) {
+            $this->finalizeBgProcStatus($bgStatusFilename, "", $e);
+            $subsonicModule->startService();
+            exit(1);
+        }
     }
 }
 
 // Register the RPC service.
 $rpcServiceMgr = &OMVRpcServiceMgr::getInstance();
 $rpcServiceMgr->registerService(new OMVRpcServiceSubsonic());
-

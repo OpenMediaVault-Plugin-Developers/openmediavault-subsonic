@@ -129,7 +129,6 @@ Ext.define("OMV.module.admin.service.subsonic.Settings", {
                     window.open(link, "_blank");
                 },
                 margin : "0 0 5 0"
-            
             },{
                 border: false,
                 html: "<br />"
@@ -150,35 +149,8 @@ Ext.define("OMV.module.admin.service.subsonic.Settings", {
                 name    : "updatesub",
                 text    : _("Update Subsonic"),
                 scope   : this,
-                handler : function() {
-                    var me = this;
-                    OMV.MessageBox.show({
-                        title   : _("Confirmation"),
-                        msg     : _("Are you sure you want to update Subsonic?"),
-                        buttons : Ext.Msg.YESNO,
-                        fn      : function(answer) {
-                            if (answer !== "yes")
-                               return;
-
-                            OMV.Rpc.request({
-                                scope   : me,
-                                rpcData : {
-                                    service : "Subsonic",
-                                    method  : "doUpdateSUB",
-                                    params  : {
-                                        update   : 0
-                                    }
-                                },
-                                success : function(id, success, response) {
-                                    me.doReload();
-                                    OMV.MessageBox.hide();
-                                }
-                            });
-                        },
-                        scope : me,
-                        icon  : Ext.Msg.QUESTION
-                    });
-                }
+                handler : Ext.Function.bind(me.onUpdateButton, me, [ me ]),
+                margin  : "5 0 0 0"
             },{
                 border: false,
                 html: "<br />"
@@ -190,36 +162,8 @@ Ext.define("OMV.module.admin.service.subsonic.Settings", {
                 name    : "updatesubb",
                 text    : _("Update Subsonic Beta"),
                 scope   : this,
-                handler : function() {
-                    var me = this;
-                    OMV.MessageBox.show({
-                        title   : _("Confirmation"),
-                        msg     : _("Are you sure you want to update Subsonic Beta?"),
-                        buttons : Ext.Msg.YESNO,
-                        fn      : function(answer) {
-                            if (answer !== "yes")
-                               return;
-                            // throw new OMVException(OMVErrorMsg::E_MISC_FAILURE, "You CAN NOT use this branch with this repository.");
-
-                            OMV.Rpc.request({
-                                scope   : me,
-                                rpcData : {
-                                    service : "Subsonic",
-                                    method  : "doUpdateSUBB",
-                                    params  : {
-                                        update   : 0
-                                    }
-                                },
-                                success : function(id, success, response) {
-                                    me.doReload();
-                                    OMV.MessageBox.hide();
-                                }
-                            });
-                        },
-                        scope : me,
-                        icon  : Ext.Msg.QUESTION
-                    });
-                }
+                handler : Ext.Function.bind(me.onUpdatebButton, me, [ me ]),
+                margin  : "5 0 0 0"
             },{
                 border: false,
                 html: "<br />"
@@ -294,9 +238,8 @@ Ext.define("OMV.module.admin.service.subsonic.Settings", {
         }];
     },
 	
-	onBackupButton: function() {
+    onBackupButton: function() {
         var me = this;
-        me.doSubmit();
         Ext.create("OMV.window.Execute", {
             title      : _("Backup"),
             rpcService : "Subsonic",
@@ -310,15 +253,50 @@ Ext.define("OMV.module.admin.service.subsonic.Settings", {
         }).show();
     },
 
-	onRestoreButton: function() {
+    onRestoreButton: function() {
         var me = this;
-        me.doSubmit();
         Ext.create("OMV.window.Execute", {
             title      : _("Restore"),
             rpcService : "Subsonic",
             rpcMethod  : "doRestore",
             listeners  : {
                 scope     : me,
+                exception : function(wnd, error) {
+                    OMV.MessageBox.error(null, error);
+                }
+            }
+        }).show();
+    },
+
+        onUpdateButton: function() {
+        var me = this;
+        Ext.create("OMV.window.Execute", {
+            title      : _("Update Subsonic"),
+            rpcService : "Subsonic",
+            rpcMethod  : "doUpdateSUB",
+            listeners  : {
+                scope     : me,
+                finish : function() {
+                    me.doReload();
+                },
+                exception : function(wnd, error) {
+                    OMV.MessageBox.error(null, error);
+                }
+            }
+        }).show();
+    },
+
+        onUpdatebButton: function() {
+        var me = this;
+        Ext.create("OMV.window.Execute", {
+            title      : _("Update Subsonic Beta"),
+            rpcService : "Subsonic",
+            rpcMethod  : "doUpdateSUBB",
+            listeners  : {
+                scope     : me,
+                finish : function() {
+                    me.doReload();
+                },
                 exception : function(wnd, error) {
                     OMV.MessageBox.error(null, error);
                 }

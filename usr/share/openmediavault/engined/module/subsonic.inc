@@ -28,23 +28,28 @@ class OMVModuleSubsonic extends OMVModuleServiceAbstract implements
     OMVIModuleServiceStatus
 {
 
-    private function getPluginName() {
+    private function getPluginName()
+    {
         return strtolower($this->getName());
     }
 
-    private function getEventMessagePath() {
+    private function getEventMessagePath()
+    {
         return sprintf("org.openmediavault.service.%s", $this->getPluginName());
     }
 
-    private function getXPath() {
-        return sprintf("//services/%s", $this->getPluginName());
+    private function getXPath()
+    {
+        return sprintf("org.openmediavault.service.%s", $this->getPluginName());
     }
 
-    public function getName() {
+    public function getName()
+    {
         return "Subsonic";
     }
 
-    public function getStatus() {
+    public function getStatus()
+    {
         global $xmlConfig;
 
         $object = $xmlConfig->get($this->getXPath());
@@ -66,7 +71,8 @@ class OMVModuleSubsonic extends OMVModuleServiceAbstract implements
         );
     }
 
-    public function startService() {
+    public function startService()
+    {
         global $xmlConfig;
 
         $object = $xmlConfig->get($this->getXPath());
@@ -78,23 +84,27 @@ class OMVModuleSubsonic extends OMVModuleServiceAbstract implements
             );
         }
 
-        if (!boolval($object["enable"]))
+        if (!boolval($object["enable"])) {
             return;
+        }
 
         $initd = new OMVSysVInitScript($this->getPluginName(), true);
         $initd->exec();
     }
 
-    public function stopService() {
+    public function stopService()
+    {
         $initd = new OMVSysVInitScript($this->getPluginName());
         $initd->exec();
     }
 
-    function bindListeners(OMVNotifyDispatcher $dispatcher) {
+    public function bindListeners(OMVNotifyDispatcher $dispatcher)
+    {
         $dispatcher->addListener(
             OMV_NOTIFY_MODIFY,
             $this->getEventMessagePath(),
-            array($this, "setDirty"));
+            array($this, "setDirty")
+        );
     }
 }
 
