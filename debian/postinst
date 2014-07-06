@@ -24,15 +24,6 @@ case "$1" in
             fi
         fi
 
-        STABLE=`wget -q http://www.subsonic.org/pages/download.jsp -O - | \grep subsonic-[0-9].[0-9].deb | \sed 's/.*href=\"\(.*\)\".*/\1/' | sed 's/^[^-]*=//' | sed 's/\(^subsonic\-\)\(.*\)\(\.deb\)/\2/'`
-		#BETA=`wget -q http://www.subsonic.org/pages/download.jsp -O - | \grep subsonic-[0-9].[0-9].beta[0-9].deb | \sed 's/.*href=\"\(.*\)\".*/\1/' | sed 's/^[^-]*=//' | sed 's/\(^subsonic\-\)\(.*\)\(\.deb\)/\2/'`
-
-        if [ ! -d /var/subsonic ]; then
-            wget http://sourceforge.net/projects/subsonic/files/subsonic/${STABLE}/subsonic-${STABLE}.deb -O /tmp/subsonic-${STABLE}.deb
-            dpkg -i /tmp/subsonic-${STABLE}.deb
-            rm -Rf /tmp/subsonic-${STABLE}.deb
-        fi
-
         if ! omv_config_exists "/config/services/subsonic"; then
             echo "Initial configuration."
             object="<enable>0</enable>"

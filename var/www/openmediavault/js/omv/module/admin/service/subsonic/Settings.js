@@ -99,6 +99,7 @@ Ext.define("OMV.module.admin.service.subsonic.Settings", {
             items : [{
                 xtype      : "checkbox",
                 name       : "enable",
+                boxLabel   : _("Subsonic can take a few seconds to start."),
                 fieldLabel : _("Enable"),
                 checked    : false
             },{

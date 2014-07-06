@@ -28,7 +28,7 @@ require_once "openmediavault/util.inc";
 
 class OMVRpcServiceSubsonic extends OMVRpcServiceAbstract
 {
-    private $subsonicSettingsDir = "/var/subsonic/";
+    private $subsonicSettingsDir = "/var/subsonic/db/";
     private $subsonicSettingsFile = "/var/subsonic/subsonic.properties";
 
     private function getPluginName()
@@ -128,7 +128,7 @@ class OMVRpcServiceSubsonic extends OMVRpcServiceAbstract
         $deviceDir = $deviceDir["dir"];
 
 
-        backupPath = "$deviceDir/SUBbackup";
+        $backupPath = "$deviceDir/SUBbackup";
         $params["path"] = $backupPath;
 
 
@@ -212,8 +212,9 @@ class OMVRpcServiceSubsonic extends OMVRpcServiceAbstract
             $backupPath = $xmlConfig->get($xPath);
 
             $cmd = sprintf(
-                "tar -zcvPf %s %s 2>&1",
+                "tar -zcvPf %s -c %s %s 2>&1",
                 $backupPath,
+                $this->subsonicSettingsFile,
                 $this->subsonicSettingsDir
             );
 
@@ -277,7 +278,7 @@ class OMVRpcServiceSubsonic extends OMVRpcServiceAbstract
                     $bgOutputFilename
                 );
 
-                $cmd = sprintf("tar -zxvf %s -C / 2>&1", $backupPath);
+                $cmd = sprintf("tar -zxvPf %s -C / 2>&1", $backupPath);
 
                 $this->exec($cmd, $output, $bgOutputFilename);
                 $this->finalizeBgProcStatus($bgStatusFilename, $output);
