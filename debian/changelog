@@ -1,4 +1,10 @@
-openmediavault-subsonic (1.0.0) UNRELEASED; urgency=medium
+openmediavault-subsonic (1.0.1) unstable; urgency=low
+
+  * Bug fixes
+
+ -- OpenMediaVault Plugin Developers <plugins@omv-extras.org>  Mon, 14 Jul 2014 13:41:41 -0500
+
+openmediavault-subsonic (1.0.0) unstable; urgency=medium
 
   * Initial release
 
