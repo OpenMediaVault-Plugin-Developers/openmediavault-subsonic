@@ -94,8 +94,10 @@ class OMVModuleSubsonic extends OMVModuleServiceAbstract implements
 
     public function stopService()
     {
-        $initd = new OMVSysVInitScript($this->getPluginName());
-        $initd->exec();
+        if (file_exists('/etc/init.d/subsonic')) {
+            $initd = new OMVSysVInitScript($this->getPluginName());
+            $initd->exec();
+        }
     }
 
     public function bindListeners(OMVNotifyDispatcher $dispatcher)

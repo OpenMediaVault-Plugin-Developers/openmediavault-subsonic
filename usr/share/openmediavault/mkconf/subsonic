@@ -5,12 +5,12 @@ set -e
 . /etc/default/openmediavault
 . /usr/share/openmediavault/scripts/helper-functions
 
+export PATH=$PATH
 OMV_SUB_CONFIG="/etc/default/subsonic"
 OMV_SUB_USER=subsonic
 OMV_SUB_PLUGIN_XPATH=//services/subsonic
 
 update() {
-service subsonic stop
 ver1=`wget -q http://www.subsonic.org/pages/download.jsp -O - | \grep subsonic-[0-9].[0-9].deb | \sed 's/.*href=\"\(.*\)\".*/\1/' | sed 's/^[^-]*=//' | sed 's/\(^subsonic\-\)\(.*\)\(\.deb\)/\2/'`
 if [ "$ver1" == "" ]; then
     exit
@@ -21,7 +21,6 @@ rm -Rf /tmp/subsonic-${ver1}.deb
 }
 
 bupdate() {
-service subsonic stop
 ver1=`wget -q http://www.subsonic.org/pages/download.jsp -O - | \grep subsonic-[0-9].[0-9].beta[0-9].deb | \sed 's/.*href=\"\(.*\)\".*/\1/' | sed 's/^[^-]*=//' | sed 's/\(^subsonic\-\)\(.*\)\(\.deb\)/\2/'`
 if [ "$ver1" == "" ]; then
     exit
@@ -33,7 +32,7 @@ rm -Rf /tmp/subsonic-${ver1}.deb
 
 getsettings() {
 ver1=`wget -q http://www.subsonic.org/pages/download.jsp -O - | \grep subsonic-[0-9].[0-9].deb | \sed 's/.*href=\"\(.*\)\".*/\1/' | sed 's/^[^-]*=//' | sed 's/\(^subsonic\-\)\(.*\)\(\.deb\)/\2/'`
-ver2=`grep -A 6 'Package: subsonic' /var/lib/dpkg/status  | grep ^Version: | sed 's/^[^-]*: //'`
+ver2=`grep -A 6 'Package: subsonic' /var/lib/dpkg/status > /dev/null | grep ^Version: | sed 's/^[^-]*: //'`
 ver3=`wget -q http://www.subsonic.org/pages/download.jsp -O - | \grep subsonic-[0-9].[0-9].beta[0-9].deb | \sed 's/.*href=\"\(.*\)\".*/\1/' | sed 's/^[^-]*=//' | sed 's/\(^subsonic\-\)\(.*\)\(\.deb\)/\2/'`
 ver4="${ver3/beta/}"
 ver5="${ver2/beta/}"

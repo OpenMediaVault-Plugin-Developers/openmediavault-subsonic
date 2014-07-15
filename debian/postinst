@@ -10,7 +10,6 @@ case "$1" in
         if ! getent passwd subsonic >/dev/null 2>&1; then
             echo "Adding subsonic user..."
             useradd --create-home --groups users,audio --no-user-group --shell /usr/sbin/nologin subsonic
-            insserv -d subsonic
         else
             echo "subsonic user already exists."
         fi
