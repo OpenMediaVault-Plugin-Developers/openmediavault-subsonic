@@ -73,23 +73,25 @@ class OMVModuleSubsonic extends OMVModuleServiceAbstract implements
 
     public function startService()
     {
-        global $xmlConfig;
+        if (file_exists('/etc/init.d/subsonic')) {
+            global $xmlConfig;
 
-        $object = $xmlConfig->get($this->getXPath());
+            $object = $xmlConfig->get($this->getXPath());
 
-        if (is_null($object)) {
-            throw new OMVException(
-                OMVErrorMsg::E_CONFIG_GET_OBJECT_FAILED,
-                $this->getXPath()
-            );
+            if (is_null($object)) {
+                throw new OMVException(
+                    OMVErrorMsg::E_CONFIG_GET_OBJECT_FAILED,
+                    $this->getXPath()
+                );
+            }
+
+            if (!boolval($object["enable"])) {
+                return;
+            }
+
+            $initd = new OMVSysVInitScript($this->getPluginName(), true);
+            $initd->exec();
         }
-
-        if (!boolval($object["enable"])) {
-            return;
-        }
-
-        $initd = new OMVSysVInitScript($this->getPluginName(), true);
-        $initd->exec();
     }
 
     public function stopService()
