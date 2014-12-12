@@ -1,3 +1,9 @@
+openmediavault-subsonic (1.0.5) unstable; urgency=low
+
+  * Add custom debian/control field XB-Plugin-Section
+
+ -- OpenMediaVault Plugin Developers <plugins@omv-extras.org>  Fri, 12 Dec 2014 06:54:18 -0600
+
 openmediavault-subsonic (1.0.4) unstable; urgency=low
 
   * Fix uninstall
