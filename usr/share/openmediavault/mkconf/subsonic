@@ -74,14 +74,20 @@ if [ "$(omv_config_get "//services/subsonic/enable")" != "1" ]; then
     exit 0
 fi
 
+if [ "$(omv_config_get "//services/subsonic/ssl")" != "1" ]; then
+    encryption="port"
+else
+    encryption="https-port"
+fi
 
+SSL=$(omv_config_get "${OMV_SUB_PLUGIN_XPATH}/ssl")
 port=$(omv_config_get "${OMV_SUB_PLUGIN_XPATH}/port")
 
 # Create subsonic config file
 cat <<EOF > ${OMV_SUB_CONFIG}
 # Configuration for openmediavault-subsonic
 
-SUBSONIC_ARGS="--port=${port} --max-memory=150"
+SUBSONIC_ARGS="--${encryption}=${port} --max-memory=150"
 SUBSONIC_USER=${OMV_SUB_USER}
 EOF
 

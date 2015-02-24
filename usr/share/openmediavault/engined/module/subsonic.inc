@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Copyright (C) 2013-2014 OpenMediaVault Plugin Developers
+ * Copyright (C) 2013-2015 OpenMediaVault Plugin Developers
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,7 +21,6 @@ require_once "openmediavault/config.inc";
 require_once "openmediavault/error.inc";
 require_once "openmediavault/initscript.inc";
 require_once "openmediavault/module.inc";
-require_once "openmediavault/util.inc";
 
 class OMVModuleSubsonic extends OMVModuleServiceAbstract implements
     OMVINotifyListener,

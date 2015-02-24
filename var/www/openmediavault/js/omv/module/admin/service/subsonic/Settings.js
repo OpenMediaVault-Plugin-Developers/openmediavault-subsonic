@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2013 OpenMediaVault Plugin Developers
+ * Copyright (C) 2013-2015 OpenMediaVault Plugin Developers
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,23 +20,27 @@
 // require("js/omv/data/Store.js")
 // require("js/omv/data/Model.js")
 // require("js/omv/form/plugin/LinkedFields.js")
+// require("js/omv/module/admin/service/subsonic/Backup.js")
 
 Ext.define("OMV.module.admin.service.subsonic.Settings", {
     extend : "OMV.workspace.form.Panel",
     uses   : [
         "OMV.data.Model",
         "OMV.data.Store",
+        "OMV.module.admin.service.subsonic.Backup"
         "OMV.module.admin.service.subsonic.UpdateSUB",
         "OMV.module.admin.service.subsonic.UpdateSUBB"
     ],
 
-    initComponent : function () {
-        var me = this;
+    rpcService   : "Subsonic",
+    rpcGetMethod : "getSettings",
+    rpcSetMethod : "setSettings",
 
-        me.on('load', function () {
-            var checked = me.findField('enable').checked;
-            var showtab = me.findField('showtab').checked;
-            var parent = me.up('tabpanel');
+    initComponent : function () {
+        this.on('load', function () {
+            var checked = this.findField('enable').checked;
+            var showtab = this.findField('showtab').checked;
+            var parent = this.up('tabpanel');
 
             if (!parent)
                 return;
@@ -47,14 +51,10 @@ Ext.define("OMV.module.admin.service.subsonic.Settings", {
                 checked ? managementPanel.enable() : managementPanel.disable();
                 showtab ? managementPanel.tab.show() : managementPanel.tab.hide();
             }
-        });
+        }, this);
 
-        me.callParent(arguments);
+        this.callParent(arguments);
     },
-
-    rpcService   : "Subsonic",
-    rpcGetMethod : "getSettings",
-    rpcSetMethod : "setSettings",
 
     plugins      : [{
         ptype        : "linkedfields",
@@ -84,8 +84,160 @@ Ext.define("OMV.module.admin.service.subsonic.Settings", {
                 "bupdate",
             ],
             properties : "!show"
+        },{
+            name       : [
+                "showbutton",
+            ],
+            conditions : [
+                { name  : "enable", value : false }
+            ],
+            properties : "!show"
         }]
     }],
+
+    getButtonItems: function() {
+        var items = this.callParent(arguments);
+
+        items.push({
+            id: this.getId() + "-show",
+            xtype: "button",
+            name: "showbutton",
+            text: _("Open Web Client"),
+            icon: "images/subsonic.png",
+            iconCls: Ext.baseCSSPrefix + "btn-icon-16x16",
+            scope: this,
+            handler: function() {
+                var proxy = this.getForm().findField("ppass").getValue();
+                if (proxy == true) {
+                    var link = "http://" + location.hostname + "/subsonic/";
+                } else {
+                    var port = this.getForm().findField("port").getValue();
+                    var link = "http://" + location.hostname + ":" + port;
+                }
+                window.open(link, "_blank");
+            }
+        },{
+            id: this.getId() + "-update",
+            xtype: "button",
+            name    : "updatesub",
+            text: _("Update available"),
+            icon: "images/subsonic.png",
+            iconCls: Ext.baseCSSPrefix + "btn-icon-16x16",
+            scope: this,
+            handler : function() {
+                var me = this;
+                OMV.MessageBox.show({
+                    title   : _("Confirmation"),
+                    msg     : _("Are you sure you want to update SubSonic?"),
+                    buttons : Ext.Msg.YESNO,
+                    fn      : function(answer) {
+                        if (answer !== "yes")
+                           return;
+                       OMV.Rpc.request({
+                           scope   : me,
+                           rpcData : {
+                                service : "Subsonic",
+                                method  : "doUpdateSAB",
+                                params  : {
+                                    update   : 0
+                                }
+                            },
+                            success : function(id, success, response) {
+                                me.doReload();
+                                OMV.MessageBox.hide();
+                            }
+                        });
+                    },
+                    scope : me,
+                    icon  : Ext.Msg.QUESTION
+                });
+            }
+        },{
+            id: this.getId() + "-update",
+            xtype: "button",
+            name    : "updatesub",
+            text: _("Update available"),
+            icon: "images/subsonic.png",
+            iconCls: Ext.baseCSSPrefix + "btn-icon-16x16",
+            scope: this,
+            handler : function() {
+                var me = this;
+                OMV.MessageBox.show({
+                    title   : _("Confirmation"),
+                    msg     : _("Are you sure you want to update SubSonic?"),
+                    buttons : Ext.Msg.YESNO,
+                    fn      : function(answer) {
+                        if (answer !== "yes")
+                           return;
+                       OMV.Rpc.request({
+                           scope   : me,
+                           rpcData : {
+                                service : "Subsonic",
+                                method  : "doUpdateSuB",
+                                params  : {
+                                    update   : 0
+                                }
+                            },
+                            success : function(id, success, response) {
+                                me.doReload();
+                                OMV.MessageBox.hide();
+                            }
+                        });
+                    },
+                    scope : me,
+                    icon  : Ext.Msg.QUESTION
+                });
+            }
+        },{
+            id: this.getId() + "-update",
+            xtype: "button",
+            name    : "updatesubb",
+            text: _("Update available"),
+            icon: "images/subsonic.png",
+            iconCls: Ext.baseCSSPrefix + "btn-icon-16x16",
+            scope: this,
+            handler : function() {
+                var me = this;
+                OMV.MessageBox.show({
+                    title   : _("Confirmation"),
+                    msg     : _("Are you sure you want to update SubSonic?"),
+                    buttons : Ext.Msg.YESNO,
+                    fn      : function(answer) {
+                        if (answer !== "yes")
+                           return;
+                       OMV.Rpc.request({
+                           scope   : me,
+                           rpcData : {
+                                service : "Subsonic",
+                                method  : "doUpdateSuBB",
+                                params  : {
+                                    bupdate   : 0
+                                }
+                            },
+                            success : function(id, success, response) {
+                                me.doReload();
+                                OMV.MessageBox.hide();
+                            }
+                        });
+                    },
+                    scope : me,
+                    icon  : Ext.Msg.QUESTION
+                });
+            }
+        }, {
+            id: this.getId() + "-backup",
+            xtype: "button",
+            text: _("Backup/restore"),
+            icon: "images/wrench.png",
+            iconCls: Ext.baseCSSPrefix + "btn-icon-16x16",
+            scope: this,
+            handler: function() {
+                Ext.create("OMV.module.admin.service.subsonic.Backup").show();
+            }
+        });
+
+        return items;
+    },
 
     getFormItems : function() {
         var me = this;
@@ -119,17 +271,17 @@ Ext.define("OMV.module.admin.service.subsonic.Settings", {
                 allowBlank: false,
                 value: 4040
             },{
-                xtype   : "button",
-                name    : "opensubsonic",
-                text    : _("Subsonic Web Interface"),
-                scope   : this,
-                handler : function() {
-                    var me = this;
-                    var port = me.getForm().findField("port").getValue();
-                    var link = "http://" + location.hostname + ":" + port + "/";
-                    window.open(link, "_blank");
-                },
-                margin : "0 0 5 0"
+                xtype      : "checkbox",
+                name       : "ssl",
+                fieldLabel : _("SSL"),
+                boxLabel   : _("Auto enable SSL. An OpenMediaVault certificate must have been generated."),
+                checked    : false
+            },{
+                xtype      : "checkbox",
+                name       : "ppass",
+                fieldLabel : _("Proxy Pass"),
+                boxLabel   : _("Enable this to access via OMV_IP/subsonic"),
+                checked    : false
             },{
                 border: false,
                 html: "<br />"
@@ -146,163 +298,10 @@ Ext.define("OMV.module.admin.service.subsonic.Settings", {
                 xtype   : "checkbox",
                 name    : "update"
             },{
-                xtype   : "button",
-                name    : "updatesub",
-                text    : _("Update Subsonic"),
-                scope   : this,
-                handler : Ext.Function.bind(me.onUpdateButton, me, [ me ]),
-                margin  : "5 0 0 0"
-            },{
-                border: false,
-                html: "<br />"
-            },{
                 xtype   : "checkbox",
                 name    : "bupdate"
-            },{
-                xtype   : "button",
-                name    : "updatesubb",
-                text    : _("Update Subsonic Beta"),
-                scope   : this,
-                handler : Ext.Function.bind(me.onUpdatebButton, me, [ me ]),
-                margin  : "5 0 0 0"
-            },{
-                border: false,
-                html: "<br />"
-            }]
-                },{
-                        xtype: "fieldset",
-                        title: _("Backup User Settings"),
-                        fieldDefaults: {
-                                labelSeparator: ""
-                        },
-                        items : [{
-                xtype         : "combo",
-                name          : "mntentref",
-                fieldLabel    : _("Volume"),
-                emptyText     : _("Select a volume ..."),
-                allowBlank    : false,
-                allowNone     : false,
-                editable      : false,
-                triggerAction : "all",
-                displayField  : "description",
-                valueField    : "uuid",
-                store         : Ext.create("OMV.data.Store", {
-                    autoLoad : true,
-                    model    : OMV.data.Model.createImplicit({
-                        idProperty : "uuid",
-                        fields     : [
-                            { name : "uuid", type : "string" },
-                            { name : "devicefile", type : "string" },
-                            { name : "description", type : "string" }
-                        ]
-                    }),
-                    proxy : {
-                        type : "rpc",
-                        rpcData : {
-                            service : "ShareMgmt",
-                            method  : "getCandidates"
-                        },
-                        appendSortParams : false
-                    },
-                    sorters : [{
-                        direction : "ASC",
-                        property  : "devicefile"
-                    }]
-                })
-            },{
-                xtype      : "textfield",
-                name       : "path",
-                fieldLabel : _("Path"),
-                allowNone  : true,
-                readOnly   : true
-            },{
-                xtype   : "button",
-                name    : "backup",
-                text    : _("Backup"),
-                scope   : this,
-                handler : Ext.Function.bind(me.onBackupButton, me, [ me ]),
-                margin  : "5 0 0 0"
-            },{
-                border : false,
-                html   : "<ul><li>" + _("Backup settings to a data drive.") + "</li></ul>"
-            },{
-                xtype   : "button",
-                name    : "restore",
-                text    : _("Restore"),
-                scope   : this,
-                handler : Ext.Function.bind(me.onRestoreButton, me, [ me ]),
-                margin  : "5 0 0 0"
-            },{
-                border : false,
-                html   : "<ul><li>" + _("Restore settings from a data drive.") + "</li></ul>"
             }]
         }];
-    },
-	
-    onBackupButton: function() {
-        var me = this;
-        Ext.create("OMV.window.Execute", {
-            title      : _("Backup"),
-            rpcService : "Subsonic",
-            rpcMethod  : "doBackup",
-            listeners  : {
-                scope     : me,
-                exception : function(wnd, error) {
-                    OMV.MessageBox.error(null, error);
-                }
-            }
-        }).show();
-    },
-
-    onRestoreButton: function() {
-        var me = this;
-        Ext.create("OMV.window.Execute", {
-            title      : _("Restore"),
-            rpcService : "Subsonic",
-            rpcMethod  : "doRestore",
-            listeners  : {
-                scope     : me,
-                exception : function(wnd, error) {
-                    OMV.MessageBox.error(null, error);
-                }
-            }
-        }).show();
-    },
-
-        onUpdateButton: function() {
-        var me = this;
-        Ext.create("OMV.window.Execute", {
-            title      : _("Update Subsonic"),
-            rpcService : "Subsonic",
-            rpcMethod  : "doUpdateSUB",
-            listeners  : {
-                scope     : me,
-                finish : function() {
-                    me.doReload();
-                },
-                exception : function(wnd, error) {
-                    OMV.MessageBox.error(null, error);
-                }
-            }
-        }).show();
-    },
-
-        onUpdatebButton: function() {
-        var me = this;
-        Ext.create("OMV.window.Execute", {
-            title      : _("Update Subsonic Beta"),
-            rpcService : "Subsonic",
-            rpcMethod  : "doUpdateSUBB",
-            listeners  : {
-                scope     : me,
-                finish : function() {
-                    me.doReload();
-                },
-                exception : function(wnd, error) {
-                    OMV.MessageBox.error(null, error);
-                }
-            }
-        }).show();
     }
 });
 

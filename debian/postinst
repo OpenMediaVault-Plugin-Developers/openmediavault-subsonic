@@ -7,11 +7,17 @@ set -e
 
 case "$1" in
     configure)
+        SERVICE_XPATH_NAME="subsonic"
+        SERVICE_XPATH="/config/services/${SERVICE_XPATH_NAME}"
+
+        
         if ! getent passwd subsonic >/dev/null 2>&1; then
-            echo "Adding subsonic user..."
-            useradd --create-home --groups users,audio --no-user-group --shell /usr/sbin/nologin subsonic
-        else
-            echo "subsonic user already exists."
+            adduser --quiet \
+                    --system \
+                    --ingroup users \
+                    --no-create-home \
+                    --disabled-password \
+                    subsonic
         fi
 
         if [ -f "/var/run/subsonic.pid" ]; then
@@ -23,18 +29,15 @@ case "$1" in
             fi
         fi
 
-        if ! omv_config_exists "/config/services/subsonic"; then
-            echo "Initial configuration."
-            object="<enable>0</enable>"
-            object="${object}<showtab>0</showtab>"
-            object="${object}<update>0</update>"
-            object="${object}<bupdate>0</bupdate>"
-            object="${object}<port>4040</port>"
-            object="${object}<msg>None yet</msg>"
-            omv_config_add_element "/config/services" "subsonic" "${object}" true
+        if ! omv_config_exists "${SERVICE_XPATH}"; then
+            omv_config_add_element "/config/services" "${SERVICE_XPATH_NAME}"
+            omv_config_add_element "${SERVICE_XPATH}" "enable" "0"
+            omv_config_add_element "${SERVICE_XPATH}" "show_tab" "0"
+            omv_config_add_element "${SERVICE_XPATH}" "update" "0"
+            omv_config_add_element "${SERVICE_XPATH}" "bupdate" "0"
+            omv_config_add_element "${SERVICE_XPATH}" "port" "0"
+            omv_config_add_element "${SERVICE_XPATH}" "msg" "None yet"
         fi
-
-        omv_install_fixperms
 
         # Activate package triggers. These triggers are only set during the
         # package installation.

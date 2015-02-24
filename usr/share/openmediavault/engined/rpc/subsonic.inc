@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Copyright (C) 2013-2014 OpenMediaVault Plugin Developers
+ * Copyright (C) 2013-2015 OpenMediaVault Plugin Developers
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,10 +21,7 @@ require_once "openmediavault/config.inc";
 require_once "openmediavault/error.inc";
 require_once "openmediavault/notify.inc";
 require_once "openmediavault/object.inc";
-require_once "openmediavault/product.inc";
 require_once "openmediavault/rpcservice.inc";
-require_once "openmediavault/system.inc";
-require_once "openmediavault/util.inc";
 
 class OMVRpcServiceSubsonic extends OMVRpcServiceAbstract
 {
@@ -93,6 +90,8 @@ class OMVRpcServiceSubsonic extends OMVRpcServiceAbstract
         $object["showtab"] = boolval($object["showtab"]);
         $object["update"]  = boolval($object["update"]);
         $object["bupdate"] = boolval($object["bupdate"]);
+        $object["ssl"]     = boolval($object["ssl"]);
+        $object["ppass"]   = boolval($object["ppass"]);
         $object["port"]    = intval($object["port"]);
 
         return $object;
@@ -116,31 +115,12 @@ class OMVRpcServiceSubsonic extends OMVRpcServiceAbstract
                     "update"    : { "type" : "boolean" },
                     "bupdate"   : { "type" : "boolean" },
                     "port"      : { "type" : "integer","minimum":1024,"maximum":65535},
-                    "mntentref" : { ' . $GLOBALS['OMV_JSONSCHEMA_UUID_NONE'] . ' },
-                    "msg"       : { "type" : "string", "optional" : true },
-                    "path"      : { "type" : "string", "optional" : true }
+                    "ppass"     : { "type" : "boolean" },
+                    "ssl"       : { "type" : "boolean" },
+                    "msg"       : { "type" : "string", "optional" : true }
                 }
             }'
         );
-
-        $xPath = sprintf("//system/fstab/mntent[uuid='%s']", $params["mntentref"]);
-        $deviceDir = $xmlConfig->get($xPath);
-        $deviceDir = $deviceDir["dir"];
-
-
-        $backupPath = "$deviceDir/SUBbackup";
-        $params["path"] = $backupPath;
-
-
-        // Get existing configuration object
-        $oldObject = $xmlConfig->get($this->getXPath());
-
-        if (is_null($oldObject)) {
-            throw new OMVException(
-                OMVErrorMsg::E_CONFIG_GET_OBJECT_FAILED,
-                $this->getXPath()
-            );
-        }
 
         $object = array(
             "enable"    => array_boolval($params, "enable"),
@@ -148,9 +128,9 @@ class OMVRpcServiceSubsonic extends OMVRpcServiceAbstract
             "update"    => array_boolval($params, "update"),
             "bupdate"   => array_boolval($params, "bupdate"),
             "port"      => $params["port"],
+            "ppass"     => array_boolval($params, "ppass"),
+            "ssl"       => array_boolval($params, "ssl"),
             "msg"       => $params["msg"],
-            "mntentref" => $params["mntentref"],
-            "path"      => $params["path"],
         );
 
         if (false === $xmlConfig->replace($this->getXPath(), $object)) {
@@ -172,10 +152,23 @@ class OMVRpcServiceSubsonic extends OMVRpcServiceAbstract
 
     public function doBackup($params, $context)
     {
-        global $xmlConfig;
+        // Validate the RPC caller context.
+        $this->validateMethodContext($context, array(
+            "role" => OMV_ROLE_ADMINISTRATOR
+        ));
 
-        // Subsonic needs to have run once to generate its
-        // settings. Check if this is true
+        // Validate the parameters of the RPC service method.
+        $this->validateMethodParams(
+            $params,
+            '{
+                "type": "object",
+                "properties": {
+                    "sharedfolderref": { ' . $GLOBALS["OMV_JSONSCHEMA_UUID"] . ' }
+                }
+            }'
+        );
+
+        // Subsonic needs to have run once to generate its settings. Check if this is true.
         if (!file_exists($this->subsonicSettingsFile)) {
             throw new OMVException(
                 OMVErrorMsg::E_EXEC_MISC,
@@ -198,8 +191,13 @@ class OMVRpcServiceSubsonic extends OMVRpcServiceAbstract
             return $bgStatusFilename;
         }
 
+        // Get the Sickbeard module
+        $moduleMgr = &OMVModuleMgr::getInstance();
+        $subsonicModule = $moduleMgr->getModule($this->getName());
+
         // Child process.
         try {
+            $subsonicModule->stopService();
             $bgOutputFilename = $this->createBgProcOutput();
             $this->updateBgProcStatus(
                 $bgStatusFilename,
@@ -207,19 +205,21 @@ class OMVRpcServiceSubsonic extends OMVRpcServiceAbstract
                 $bgOutputFilename
             );
 
-            // Get the configuration object.
-            $xPath = sprintf("%s/path", $this->getXPath());
-            $backupPath = $xmlConfig->get($xPath);
+            $backupPath = sprintf(
+                "%s%subsonic.tar.gz",
+                $this->getSharedFolderPathByUuid($params["sharedfolderref"]),
+                DIRECTORY_SEPARATOR
+            );
 
             $cmd = sprintf(
-                "tar -zcvPf %s -c %s %s 2>&1",
+                "tar -zcvPf %s %s 2>&1",
                 $backupPath,
-                $this->subsonicSettingsFile,
-                $this->subsonicSettingsDir
+                $this->subsonicSettingsFile . " " . $this->subsonicSettingsDir
             );
 
             $this->exec($cmd, $output, $bgOutputFilename);
             $this->finalizeBgProcStatus($bgStatusFilename, $output);
+            $subsonicModule->startService();
             exit(0);
         } catch (Exception $e) {
             $this->finalizeBgProcStatus($bgStatusFilename, "", $e);
@@ -229,21 +229,37 @@ class OMVRpcServiceSubsonic extends OMVRpcServiceAbstract
 
     public function doRestore($params, $context)
     {
-        global $xmlConfig;
+        // Validate the RPC caller context.
+        $this->validateMethodContext($context, array(
+            "role" => OMV_ROLE_ADMINISTRATOR
+        ));
+
+        // Validate the parameters of the RPC service method.
+        $this->validateMethodParams(
+            $params,
+            '{
+                "type": "object",
+                "properties": {
+                    "sharedfolderref": { ' . $GLOBALS["OMV_JSONSCHEMA_UUID"] . ' }
+                }
+            }'
+        );
 
         // Validate the RPC caller context.
         $this->validateMethodContext($context, array(
             "role" => OMV_ROLE_ADMINISTRATOR
         ));
 
-        // Get the configuration object.
-        $xPath = sprintf("%s/path", $this->getXPath());
-        $backupPath = $xmlConfig->get($xPath);
+        $backupPath = sprintf(
+            "%s%ssubsonic.tar.gz",
+            $this->getSharedFolderPathByUuid($params["sharedfolderref"]),
+            DIRECTORY_SEPARATOR
+        );
 
         if (is_null($backupPath)) {
             throw new OMVException(
                 OMVErrorMsg::E_CONFIG_GET_OBJECT_FAILED,
-                $xPath
+                $xpath
             );
         }
 
@@ -267,8 +283,6 @@ class OMVRpcServiceSubsonic extends OMVRpcServiceAbstract
             $subsonicModule = $moduleMgr->getModule($this->getName());
 
             // Child process.
-
-
             try {
                 $subsonicModule->stopService();
                 $bgOutputFilename = $this->createBgProcOutput();
@@ -278,7 +292,7 @@ class OMVRpcServiceSubsonic extends OMVRpcServiceAbstract
                     $bgOutputFilename
                 );
 
-                $cmd = sprintf("tar -zxvPf %s -C / 2>&1", $backupPath);
+                $cmd = sprintf("tar -zxvf %s -C / 2>&1", $backupPath);
 
                 $this->exec($cmd, $output, $bgOutputFilename);
                 $this->finalizeBgProcStatus($bgStatusFilename, $output);
@@ -294,7 +308,7 @@ class OMVRpcServiceSubsonic extends OMVRpcServiceAbstract
         }
     }
 
-    public function doUpdateSUB($params, $context)
+    public function doUpdateSuB($params, $context)
     {
         global $xmlConfig;
 
@@ -340,7 +354,7 @@ class OMVRpcServiceSubsonic extends OMVRpcServiceAbstract
         }
     }
 
-    public function doUpdateSUBB($params, $context)
+    public function doUpdateSuBB($params, $context)
     {
         global $xmlConfig;
 
