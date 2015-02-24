@@ -27,9 +27,9 @@ Ext.define("OMV.module.admin.service.subsonic.Settings", {
     uses   : [
         "OMV.data.Model",
         "OMV.data.Store",
-        "OMV.module.admin.service.subsonic.Backup"
-        "OMV.module.admin.service.subsonic.UpdateSUB",
-        "OMV.module.admin.service.subsonic.UpdateSUBB"
+        "OMV.module.admin.service.subsonic.Backup",
+        "OMV.module.admin.service.subsonic.UpdateSuB",
+        "OMV.module.admin.service.subsonic.UpdateSuBB"
     ],
 
     rpcService   : "Subsonic",
@@ -89,9 +89,10 @@ Ext.define("OMV.module.admin.service.subsonic.Settings", {
                 "showbutton",
             ],
             conditions : [
-                { name  : "enable", value : false }
+                { name  : "enable", value : true },
+                { name  : "showtab", value : true }
             ],
-            properties : "!show"
+            properties : "show"
         }]
     }],
 
@@ -119,8 +120,8 @@ Ext.define("OMV.module.admin.service.subsonic.Settings", {
         },{
             id: this.getId() + "-update",
             xtype: "button",
-            name    : "updatesub",
-            text: _("Update available"),
+            name: "updatesub",
+            text: _("Normal Update"),
             icon: "images/subsonic.png",
             iconCls: Ext.baseCSSPrefix + "btn-icon-16x16",
             scope: this,
@@ -128,43 +129,7 @@ Ext.define("OMV.module.admin.service.subsonic.Settings", {
                 var me = this;
                 OMV.MessageBox.show({
                     title   : _("Confirmation"),
-                    msg     : _("Are you sure you want to update SubSonic?"),
-                    buttons : Ext.Msg.YESNO,
-                    fn      : function(answer) {
-                        if (answer !== "yes")
-                           return;
-                       OMV.Rpc.request({
-                           scope   : me,
-                           rpcData : {
-                                service : "Subsonic",
-                                method  : "doUpdateSAB",
-                                params  : {
-                                    update   : 0
-                                }
-                            },
-                            success : function(id, success, response) {
-                                me.doReload();
-                                OMV.MessageBox.hide();
-                            }
-                        });
-                    },
-                    scope : me,
-                    icon  : Ext.Msg.QUESTION
-                });
-            }
-        },{
-            id: this.getId() + "-update",
-            xtype: "button",
-            name    : "updatesub",
-            text: _("Update available"),
-            icon: "images/subsonic.png",
-            iconCls: Ext.baseCSSPrefix + "btn-icon-16x16",
-            scope: this,
-            handler : function() {
-                var me = this;
-                OMV.MessageBox.show({
-                    title   : _("Confirmation"),
-                    msg     : _("Are you sure you want to update SubSonic?"),
+                    msg     : _("Update/Downgrade SubSonic?"),
                     buttons : Ext.Msg.YESNO,
                     fn      : function(answer) {
                         if (answer !== "yes")
@@ -189,10 +154,10 @@ Ext.define("OMV.module.admin.service.subsonic.Settings", {
                 });
             }
         },{
-            id: this.getId() + "-update",
+            id: this.getId() + "-updateb",
             xtype: "button",
-            name    : "updatesubb",
-            text: _("Update available"),
+            name: "updatesubb",
+            text: _("Beta Update"),
             icon: "images/subsonic.png",
             iconCls: Ext.baseCSSPrefix + "btn-icon-16x16",
             scope: this,
@@ -200,7 +165,7 @@ Ext.define("OMV.module.admin.service.subsonic.Settings", {
                 var me = this;
                 OMV.MessageBox.show({
                     title   : _("Confirmation"),
-                    msg     : _("Are you sure you want to update SubSonic?"),
+                    msg     : _("Install Beta version of SubSonic?"),
                     buttons : Ext.Msg.YESNO,
                     fn      : function(answer) {
                         if (answer !== "yes")
@@ -211,7 +176,7 @@ Ext.define("OMV.module.admin.service.subsonic.Settings", {
                                 service : "Subsonic",
                                 method  : "doUpdateSuBB",
                                 params  : {
-                                    bupdate   : 0
+                                    update   : 0
                                 }
                             },
                             success : function(id, success, response) {

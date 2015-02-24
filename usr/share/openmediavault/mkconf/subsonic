@@ -77,7 +77,7 @@ fi
 if [ "$(omv_config_get "//services/subsonic/ssl")" != "1" ]; then
     encryption="port"
 else
-    encryption="https-port"
+    encryption="port=0 --https-port"
 fi
 
 SSL=$(omv_config_get "${OMV_SUB_PLUGIN_XPATH}/ssl")
@@ -111,3 +111,4 @@ case "$2" in
   *)
     exit 1
 esac
+

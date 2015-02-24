@@ -52,8 +52,8 @@ class OMVRpcServiceSubsonic extends OMVRpcServiceAbstract
     {
         $this->registerMethod("getSettings");
         $this->registerMethod("setSettings");
-        $this->registerMethod('doUpdateSUB');
-        $this->registerMethod('doUpdateSUBB');
+        $this->registerMethod('doUpdateSuB');
+        $this->registerMethod('doUpdateSuBB');
 
         $this->registerMethod('doBackup');
         $this->registerMethod("doRestore");
