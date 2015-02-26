@@ -1,3 +1,10 @@
+openmediavault-subsonic (1.0.6) unstable; urgency=low
+
+  * Add HTTPS option
+  * Add Proxy option
+
+ -- root <root@localhost.localdomain>  Thu, 26 Feb 2015 15:17:36 +0000
+
 openmediavault-subsonic (1.0.5) unstable; urgency=low
 
   * Add custom debian/control field XB-Plugin-Section

@@ -38,7 +38,7 @@ class OMVRpcServiceSubsonic extends OMVRpcServiceAbstract
         return sprintf("org.openmediavault.service.%s", $this->getPluginName());
     }
 
-    private function getXPath()
+    private function getXpath()
     {
         return sprintf("//services/%s", $this->getPluginName());
     }
@@ -77,12 +77,12 @@ class OMVRpcServiceSubsonic extends OMVRpcServiceAbstract
             "role" => OMV_ROLE_ADMINISTRATOR
         ));
 
-        $object = $xmlConfig->get($this->getXPath());
+        $object = $xmlConfig->get($this->getXpath());
 
         if (is_null($object)) {
             throw new OMVException(
                 OMVErrorMsg::E_CONFIG_GET_OBJECT_FAILED,
-                $this->getXPath()
+                $this->getXpath()
             );
         }
 
@@ -122,6 +122,23 @@ class OMVRpcServiceSubsonic extends OMVRpcServiceAbstract
             }'
         );
 
+        // Run checks to verify sellected settings
+        if ($params["ssl"] == "1") {
+            if ($params["ppass"] == "1") {
+                throw new OMVException(
+                    OMVErrorMsg::E_MISC_FAILURE,
+                    "You can not enable both SSL and Proxy Pass."
+                );
+            }
+            $xSsl = $xmlConfig->get("//webadmin/enablessl");
+            if ($xSsl == "1") {
+                throw new OMVException(
+                    OMVErrorMsg::E_MISC_FAILURE,
+                    "You have SSL enabled for the main UI, Do NOT enable it here as well."
+                );
+            }
+        }
+
         $object = array(
             "enable"    => array_boolval($params, "enable"),
             "showtab"   => array_boolval($params, "showtab"),
@@ -133,10 +150,10 @@ class OMVRpcServiceSubsonic extends OMVRpcServiceAbstract
             "msg"       => $params["msg"],
         );
 
-        if (false === $xmlConfig->replace($this->getXPath(), $object)) {
+        if (false === $xmlConfig->replace($this->getXpath(), $object)) {
             throw new OMVException(
                 OMVErrorMsg::E_CONFIG_SET_OBJECT_FAILED,
-                $this->getXPath()
+                $this->getXpath()
             );
         }
 
@@ -206,7 +223,7 @@ class OMVRpcServiceSubsonic extends OMVRpcServiceAbstract
             );
 
             $backupPath = sprintf(
-                "%s%subsonic.tar.gz",
+                "%s%ssubsonic.tar.gz",
                 $this->getSharedFolderPathByUuid($params["sharedfolderref"]),
                 DIRECTORY_SEPARATOR
             );
@@ -352,6 +369,13 @@ class OMVRpcServiceSubsonic extends OMVRpcServiceAbstract
             $subsonicModule->startService();
             exit(1);
         }
+
+        $dispatcher = &OMVNotifyDispatcher::getInstance();
+        $dispatcher->notify(
+            OMV_NOTIFY_MODIFY,
+            $this->getEventMessagePath(),
+            $object
+        );
     }
 
     public function doUpdateSuBB($params, $context)
@@ -398,9 +422,35 @@ class OMVRpcServiceSubsonic extends OMVRpcServiceAbstract
             $subsonicModule->startService();
             exit(1);
         }
+
+        $dispatcher = &OMVNotifyDispatcher::getInstance();
+        $dispatcher->notify(
+            OMV_NOTIFY_MODIFY,
+            $this->getEventMessagePath(),
+            $object
+        );
+    }
+
+    private function getSharedFolderPathByUuid($uuid)
+    {
+        global $xmlConfig;
+
+        $xpath = sprintf("//system/shares/sharedfolder[uuid='%s']", $uuid);
+        $sharedFolder = $xmlConfig->get($xpath);
+        $sharedFolderRelDirPath = $sharedFolder["reldirpath"];
+
+        $xpath = sprintf(
+            "//system/fstab/mntent[uuid='%s']",
+            $sharedFolder["mntentref"]
+        );
+        $mountPoint = $xmlConfig->get($xpath);
+        $mountPointDir = $mountPoint["dir"];
+
+        return $mountPointDir . DIRECTORY_SEPARATOR . $sharedFolderRelDirPath;
     }
 }
 
 // Register the RPC service.
 $rpcServiceMgr = &OMVRpcServiceMgr::getInstance();
 $rpcServiceMgr->registerService(new OMVRpcServiceSubsonic());
+

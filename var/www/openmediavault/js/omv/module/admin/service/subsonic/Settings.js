@@ -27,25 +27,24 @@ Ext.define("OMV.module.admin.service.subsonic.Settings", {
     uses   : [
         "OMV.data.Model",
         "OMV.data.Store",
-        "OMV.module.admin.service.subsonic.Backup",
-        "OMV.module.admin.service.subsonic.UpdateSuB",
-        "OMV.module.admin.service.subsonic.UpdateSuBB"
+        "OMV.module.admin.service.subsonic.Backup"
     ],
 
     rpcService   : "Subsonic",
     rpcGetMethod : "getSettings",
     rpcSetMethod : "setSettings",
 
-    initComponent : function () {
-        this.on('load', function () {
-            var checked = this.findField('enable').checked;
-            var showtab = this.findField('showtab').checked;
-            var parent = this.up('tabpanel');
+    initComponent: function() {
+        this.on("load", function() {
+            var checked = this.findField("enable").checked;
+            var showtab = this.findField("showtab").checked;
+            var parent = this.up("tabpanel");
 
-            if (!parent)
+            if (!parent) {
                 return;
+            }
 
-            var managementPanel = parent.down('panel[title=' + _("Web Interface") + ']');
+            var managementPanel = parent.down("panel[title=" + _("Web Interface") + "]");
 
             if (managementPanel) {
                 checked ? managementPanel.enable() : managementPanel.disable();
@@ -238,8 +237,8 @@ Ext.define("OMV.module.admin.service.subsonic.Settings", {
             },{
                 xtype      : "checkbox",
                 name       : "ssl",
-                fieldLabel : _("SSL"),
-                boxLabel   : _("Auto enable SSL. An OpenMediaVault certificate must have been generated."),
+                fieldLabel : _("HTTPS"),
+                boxLabel   : _("Auto enable HTTPS."),
                 checked    : false
             },{
                 xtype      : "checkbox",
@@ -277,3 +276,4 @@ OMV.WorkspaceManager.registerPanel({
     position  : 10,
     className : "OMV.module.admin.service.subsonic.Settings"
 });
+

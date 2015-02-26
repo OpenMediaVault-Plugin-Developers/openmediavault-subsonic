@@ -80,21 +80,42 @@ else
     encryption="port=0 --https-port"
 fi
 
-SSL=$(omv_config_get "${OMV_SUB_PLUGIN_XPATH}/ssl")
+if [ "$(omv_config_get "//services/subsonic/ppass")" != "1" ]; then
+    pass=""
+else
+    pass="--context-path=/subsonic "
+fi
+
+#SSL=$(omv_config_get "${OMV_SUB_PLUGIN_XPATH}/ssl")
 port=$(omv_config_get "${OMV_SUB_PLUGIN_XPATH}/port")
 
 # Create subsonic config file
 cat <<EOF > ${OMV_SUB_CONFIG}
 # Configuration for openmediavault-subsonic
 
-SUBSONIC_ARGS="--${encryption}=${port} --max-memory=150"
+SUBSONIC_ARGS="${pass}--${encryption}=${port} --max-memory=150"
 SUBSONIC_USER=${OMV_SUB_USER}
 EOF
 
-
 chmod 644 ${OMV_SUB_CONFIG}
 
+if [ "$(omv_config_get "//services/subsonic/ppass")" != "1" ]; then
+    if [ -f "/etc/nginx/openmediavault-webgui.d/sub.conf" ]; then
+        rm /etc/nginx/openmediavault-webgui.d/sub.conf > /dev/null 2>&1
+        nginx -s reload > /dev/null 2>&1
+    fi
+else
+    cat <<EOF > /etc/nginx/openmediavault-webgui.d/sub.conf
+location /subsonic {
+        proxy_pass        http://localhost:$(omv_config_get "//services/subsonic/port")/subsonic;
+        #proxy_set_header  Host localhost:$(omv_config_get "//services/subsonic/port");
+        proxy_set_header  Host $proxy_host/subsonic/;
+        proxy_redirect    default;
+}
 
+EOF
+    nginx -s reload
+fi
 
 }
 
