@@ -130,13 +130,13 @@ class OMVRpcServiceSubsonic extends OMVRpcServiceAbstract
                     "You can not enable both SSL and Proxy Pass."
                 );
             }
-            $xSsl = $xmlConfig->get("//webadmin/enablessl");
-            if ($xSsl == "1") {
-                throw new OMVException(
-                    OMVErrorMsg::E_MISC_FAILURE,
-                    "You have SSL enabled for the main UI, Do NOT enable it here as well."
-                );
-            }
+            //$xSsl = $xmlConfig->get("//webadmin/enablessl");
+            //if ($xSsl == "1") {
+            //    throw new OMVException(
+            //        OMVErrorMsg::E_MISC_FAILURE,
+            //        "You have SSL enabled for the main UI, Do NOT enable it here as well."
+            //    );
+            //}
         }
 
         $object = array(

@@ -11,7 +11,7 @@ OMV_SUB_USER=subsonic
 OMV_SUB_PLUGIN_XPATH=//services/subsonic
 
 update() {
-ver1=`wget -q http://www.subsonic.org/pages/download.jsp -O - | \grep subsonic-[0-9].[0-9].deb | \sed 's/.*href=\"\(.*\)\".*/\1/' | sed 's/^[^-]*=//' | sed 's/\(^subsonic\-\)\(.*\)\(\.deb\)/\2/'`
+ver1=`wget -q http://www.subsonic.org/pages/download.jsp -O - | \grep subsonic-[0-9].*.deb | \sed 's/.*href=\"\(.*\)\".*/\1/' | sed 's/^[^-]*=//' | sed 's/\(^subsonic\-\)\(.*\)\(\.deb\)/\2/'`
 if [ "$ver1" == "" ]; then
     exit
 fi
@@ -31,7 +31,7 @@ rm -Rf /tmp/subsonic-${ver1}.deb
 }
 
 getsettings() {
-ver1=`wget -q http://www.subsonic.org/pages/download.jsp -O - | \grep subsonic-[0-9].[0-9].deb | \sed 's/.*href=\"\(.*\)\".*/\1/' | sed 's/^[^-]*=//' | sed 's/\(^subsonic\-\)\(.*\)\(\.deb\)/\2/'`
+ver1=`wget -q http://www.subsonic.org/pages/download.jsp -O - | \grep subsonic-[0-9].*.deb | \sed 's/.*href=\"\(.*\)\".*/\1/' | sed 's/^[^-]*=//' | sed 's/\(^subsonic\-\)\(.*\)\(\.deb\)/\2/'`
 ver2=`grep -A 6 'Package: subsonic' /var/lib/dpkg/status | grep ^Version: | sed 's/^[^-]*: //'`
 ver3=`wget -q http://www.subsonic.org/pages/download.jsp -O - | \grep subsonic-[0-9].[0-9].beta[0-9].deb | \sed 's/.*href=\"\(.*\)\".*/\1/' | sed 's/^[^-]*=//' | sed 's/\(^subsonic\-\)\(.*\)\(\.deb\)/\2/'`
 ver4="${ver3/beta/}"
@@ -105,11 +105,12 @@ if [ "$(omv_config_get "//services/subsonic/ppass")" != "1" ]; then
         nginx -s reload > /dev/null 2>&1
     fi
 else
+    IP=$(ifconfig|sed -n "/inet addr:.*255.255.255.*/{s/.*inet addr://; s/ .*//; p}")
     cat <<EOF > /etc/nginx/openmediavault-webgui.d/sub.conf
 location /subsonic {
         proxy_pass        http://localhost:$(omv_config_get "//services/subsonic/port")/subsonic;
         #proxy_set_header  Host localhost:$(omv_config_get "//services/subsonic/port");
-        proxy_set_header  Host $proxy_host/subsonic/;
+        proxy_set_header  Host $IP;
         proxy_redirect    default;
 }
 

@@ -24,7 +24,7 @@
 
 Ext.define("OMV.module.admin.service.subsonic.Settings", {
     extend : "OMV.workspace.form.Panel",
-    uses   : [
+    requires: [
         "OMV.data.Model",
         "OMV.data.Store",
         "OMV.module.admin.service.subsonic.Backup"
