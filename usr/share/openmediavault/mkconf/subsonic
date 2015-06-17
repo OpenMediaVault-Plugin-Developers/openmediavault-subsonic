@@ -12,7 +12,7 @@ OMV_SUB_PLUGIN_XPATH=//services/subsonic
 
 update() {
 ver1=`wget -q http://www.subsonic.org/pages/download.jsp -O - | \grep subsonic-[0-9].*.deb | \sed 's/.*href=\"\(.*\)\".*/\1/' | sed 's/^[^-]*=//' | sed 's/\(^subsonic\-\)\(.*\)\(\.deb\)/\2/'`
-if [ "$ver1" == "" ]; then
+if [ "$ver1" = "" ]; then
     exit
 fi
 wget http://sourceforge.net/projects/subsonic/files/subsonic/${ver1}/subsonic-${ver1}.deb -O /tmp/subsonic-${ver1}.deb
@@ -22,7 +22,7 @@ rm -Rf /tmp/subsonic-${ver1}.deb
 
 bupdate() {
 ver1=`wget -q http://www.subsonic.org/pages/download.jsp -O - | \grep subsonic-[0-9].[0-9].beta[0-9].deb | \sed 's/.*href=\"\(.*\)\".*/\1/' | sed 's/^[^-]*=//' | sed 's/\(^subsonic\-\)\(.*\)\(\.deb\)/\2/'`
-if [ "$ver1" == "" ]; then
+if [ "$ver1" = "" ]; then
     exit
 fi
 wget http://sourceforge.net/projects/subsonic/files/subsonic/${ver1}/subsonic-${ver1}.deb -O /tmp/subsonic-${ver1}.deb
@@ -33,18 +33,18 @@ rm -Rf /tmp/subsonic-${ver1}.deb
 getsettings() {
 ver1=`wget -q http://www.subsonic.org/pages/download.jsp -O - | \grep subsonic-[0-9].*.deb | \sed 's/.*href=\"\(.*\)\".*/\1/' | sed 's/^[^-]*=//' | sed 's/\(^subsonic\-\)\(.*\)\(\.deb\)/\2/'`
 ver2=`grep -A 6 'Package: subsonic' /var/lib/dpkg/status | grep ^Version: | sed 's/^[^-]*: //'`
-ver3=`wget -q http://www.subsonic.org/pages/download.jsp -O - | \grep subsonic-[0-9].[0-9].beta[0-9].deb | \sed 's/.*href=\"\(.*\)\".*/\1/' | sed 's/^[^-]*=//' | sed 's/\(^subsonic\-\)\(.*\)\(\.deb\)/\2/'`
+ver3=`wget -q http://www.subsonic.org/pages/download.jsp -O - | \grep subsonic-[0-9]*beta[0-9].deb | \sed 's/.*href=\"\(.*\)\".*/\1/' | sed 's/^[^-]*=//' | sed 's/\(^subsonic\-\)\(.*\)\(\.deb\)/\2/'`
 ver4="${ver3/beta/}"
 ver5="${ver2/beta/}"
 msg="Current version is $ver2,"
 
-if [ "$ver2" == "" ]; then
+if [ "$ver2" = "" ]; then
     msg="No version is installed yet, click the update button for the version you require"
     xmlstarlet ed -L -u "//services/subsonic/update" -v 1 -n ${OMV_CONFIG_FILE}
     xmlstarlet ed -L -u "//services/subsonic/bupdate" -v 1 -n ${OMV_CONFIG_FILE}
 else
     if [ "$ver1" != "$ver5" ]; then
-        if [ $ver1 > $ver5 ]; then
+        if [[ $ver1 > $ver5 ]]; then
             xmlstarlet ed -L -u "//services/subsonic/update" -v 1 -n ${OMV_CONFIG_FILE}
             msg+=" $ver1 is available."
         else
@@ -58,8 +58,8 @@ else
 
     xmlstarlet ed -L -u "//services/subsonic/bupdate" -v 0 -n ${OMV_CONFIG_FILE}
 
-    if [ $ver4 > $ver1 ]; then
-        if [ "$ver3" == "$ver2" ]; then
+    if [[ $ver4 > $ver1 ]]; then
+        if [ "$ver3" = "$ver2" ]; then
             xmlstarlet ed -L -u "//services/subsonic/bupdate" -v 0 -n ${OMV_CONFIG_FILE}
         else
             xmlstarlet ed -L -u "//services/subsonic/bupdate" -v 1 -n ${OMV_CONFIG_FILE}
