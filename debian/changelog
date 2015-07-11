@@ -1,3 +1,10 @@
+openmediavault-subsonic (1.0.8) unstable; urgency=low
+
+  * Fix HTTPS option
+  * Fix Proxy option
+
+ -- root <root@localhost.localdomain>  Thu, 11 Jul 2015 03:31:36 +0000
+
 openmediavault-subsonic (1.0.7) unstable; urgency=low
 
   * Fix HTTPS option
