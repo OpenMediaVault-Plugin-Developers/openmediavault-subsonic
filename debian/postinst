@@ -10,7 +10,6 @@ case "$1" in
         SERVICE_XPATH_NAME="subsonic"
         SERVICE_XPATH="/config/services/${SERVICE_XPATH_NAME}"
 
-        
         if ! getent passwd subsonic >/dev/null 2>&1; then
             adduser --quiet \
                     --system \
@@ -35,8 +34,8 @@ case "$1" in
             omv_config_add_element "${SERVICE_XPATH}" "show_tab" "0"
             omv_config_add_element "${SERVICE_XPATH}" "update" "0"
             omv_config_add_element "${SERVICE_XPATH}" "bupdate" "0"
-            omv_config_add_element "${SERVICE_XPATH}" "port" "0"
-            omv_config_add_element "${SERVICE_XPATH}" "msg" "None yet"
+            omv_config_add_element "${SERVICE_XPATH}" "port" "4040"
+            omv_config_add_element "${SERVICE_XPATH}" "msg" "Not Installed."
         fi
 
         # Activate package triggers. These triggers are only set during the

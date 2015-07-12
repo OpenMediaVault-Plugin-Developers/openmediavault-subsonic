@@ -25,8 +25,11 @@ require_once "openmediavault/rpcservice.inc";
 
 class OMVRpcServiceSubsonic extends OMVRpcServiceAbstract
 {
-    private $subsonicSettingsDir = "/var/subsonic/db/";
+
+    private static $commands = array("doUpdateSuB","doUpdateSuBB");
+    private $subsonicSettingsDir = "/var/subsonic/";
     private $subsonicSettingsFile = "/var/subsonic/subsonic.properties";
+    private $subsonicUser = "subsonic";
 
     private function getPluginName()
     {
@@ -52,11 +55,10 @@ class OMVRpcServiceSubsonic extends OMVRpcServiceAbstract
     {
         $this->registerMethod("getSettings");
         $this->registerMethod("setSettings");
-        $this->registerMethod('doUpdateSuB');
-        $this->registerMethod('doUpdateSuBB');
+        $this->registerMethod("doCommand");
 
-        $this->registerMethod('doBackup');
-        $this->registerMethod("doRestore");
+        $this->registerMethod("downloadBackup");
+        $this->registerMethod("uploadBackup");
     }
 
     public function getSettings($params, $context)
@@ -130,13 +132,6 @@ class OMVRpcServiceSubsonic extends OMVRpcServiceAbstract
                     "You can not enable both SSL and Proxy Pass."
                 );
             }
-            //$xSsl = $xmlConfig->get("//webadmin/enablessl");
-            //if ($xSsl == "1") {
-            //    throw new OMVException(
-            //        OMVErrorMsg::E_MISC_FAILURE,
-            //        "You have SSL enabled for the main UI, Do NOT enable it here as well."
-            //    );
-            //}
         }
 
         $object = array(
@@ -167,84 +162,61 @@ class OMVRpcServiceSubsonic extends OMVRpcServiceAbstract
         return $object;
     }
 
-    public function doBackup($params, $context)
+    public function downloadBackup($params, $context)
     {
         // Validate the RPC caller context.
         $this->validateMethodContext($context, array(
-            "role" => OMV_ROLE_ADMINISTRATOR
+            "role" => OMV_ROLE_EVERYONE
         ));
 
-        // Validate the parameters of the RPC service method.
-        $this->validateMethodParams(
-            $params,
-            '{
-                "type": "object",
-                "properties": {
-                    "sharedfolderref": { ' . $GLOBALS["OMV_JSONSCHEMA_UUID"] . ' }
-                }
-            }'
-        );
-
-        // Subsonic needs to have run once to generate its settings. Check if this is true.
-        if (!file_exists($this->subsonicSettingsFile)) {
+        if (!file_exists("$this->subsonicSettingsFile")) {
             throw new OMVException(
                 OMVErrorMsg::E_EXEC_MISC,
-                "No settings folder found!"
+                "Nothing to backup found."
             );
         }
 
-        // Validate the RPC caller context.
-        $this->validateMethodContext($context, array(
-            "role" => OMV_ROLE_ADMINISTRATOR
-        ));
-
-        // Create a background process.
-        $bgStatusFilename = $this->createBgProcStatus();
-        $pid = $this->fork();
-
-        // Parent process.
-        if ($pid > 0) {
-            $this->initializeBgProcStatus($bgStatusFilename, $pid);
-            return $bgStatusFilename;
-        }
-
-        // Get the Sickbeard module
+        // Get the Subsonic module
         $moduleMgr = &OMVModuleMgr::getInstance();
         $subsonicModule = $moduleMgr->getModule($this->getName());
+        $subsonicModule->stopService();
 
-        // Child process.
-        try {
-            $subsonicModule->stopService();
-            $bgOutputFilename = $this->createBgProcOutput();
-            $this->updateBgProcStatus(
-                $bgStatusFilename,
-                "outputfilename",
-                $bgOutputFilename
-            );
+        $tmpFile = sprintf("%s/%s.tar", sys_get_temp_dir(), uniqid());
+        $archive = new PharData($tmpFile);
 
-            $backupPath = sprintf(
-                "%s%ssubsonic.tar.gz",
-                $this->getSharedFolderPathByUuid($params["sharedfolderref"]),
-                DIRECTORY_SEPARATOR
-            );
+        $archive->addFile($this->subsonicSettingsFile, "subsonic.properties");
 
-            $cmd = sprintf(
-                "tar -zcvPf %s %s 2>&1",
-                $backupPath,
-                $this->subsonicSettingsFile . " " . $this->subsonicSettingsDir
-            );
+        $directoryIterator = new RecursiveIteratorIterator(
+            new RecursiveDirectoryIterator(
+                "$this->subsonicSettingsDir/db/",
+                FilesystemIterator::SKIP_DOTS
+            )
+        );
 
-            $this->exec($cmd, $output, $bgOutputFilename);
-            $this->finalizeBgProcStatus($bgStatusFilename, $output);
-            $subsonicModule->startService();
-            exit(0);
-        } catch (Exception $e) {
-            $this->finalizeBgProcStatus($bgStatusFilename, "", $e);
-            exit(1);
-        }
+        $archive->buildFromIterator(
+            $directoryIterator,
+            $this->subsonicSettingsDir
+        );
+
+        $archive->compress(Phar::GZ);
+
+        // Remove uncompressed tar and set $tmpFile to the compressed.
+        unlink($tmpFile);
+        $tmpFile = "$tmpFile.gz";
+
+        $now = new DateTime();
+        $time = $now->format(DateTime::ISO8601);
+
+        $subsonicModule->startService();
+
+        return array(
+            "contenttype" => "application/x-tar",
+            "filename"    => "subsonic-$time.tar.gz",
+            "filepath"    => $tmpFile,
+        );
     }
 
-    public function doRestore($params, $context)
+    public function uploadBackup($params, $context)
     {
         // Validate the RPC caller context.
         $this->validateMethodContext($context, array(
@@ -257,200 +229,107 @@ class OMVRpcServiceSubsonic extends OMVRpcServiceAbstract
             '{
                 "type": "object",
                 "properties": {
-                    "sharedfolderref": { ' . $GLOBALS["OMV_JSONSCHEMA_UUID"] . ' }
+                    "filename": { "type": "string" },
+                    "filepath": { "type": "string" }
                 }
             }'
         );
 
-        // Validate the RPC caller context.
-        $this->validateMethodContext($context, array(
-            "role" => OMV_ROLE_ADMINISTRATOR
-        ));
+        // Get the Subsonic module
+        $moduleMgr = &OMVModuleMgr::getInstance();
+        $subsonicModule = $moduleMgr->getModule($this->getName());
+        $subsonicModule->stopService();
 
-        $backupPath = sprintf(
-            "%s%ssubsonic.tar.gz",
-            $this->getSharedFolderPathByUuid($params["sharedfolderref"]),
-            DIRECTORY_SEPARATOR
+        // Rename file so that it's recognized by the PharData class.
+        $filepath = sprintf("%s.tar.gz", $params["filepath"]);
+        rename($params["filepath"], $filepath);
+
+        $directoryIterator = new RecursiveIteratorIterator(
+            new RecursiveDirectoryIterator(
+                $this->subsonicSettingsDir,
+                FilesystemIterator::SKIP_DOTS
+            ),
+            RecursiveIteratorIterator::CHILD_FIRST
         );
 
-        if (is_null($backupPath)) {
+        foreach ($directoryIterator as $file) {
+            if ($file->isFile()) {
+                unlink($file->getPathname());
+            }
+
+            if ($file->isDir()) {
+                rmdir($file->getPathname());
+            }
+        }
+
+        $archive = new PharData($filepath);
+
+        $archive->extractTo($this->subsonicSettingsDir);
+
+        foreach ($directoryIterator as $file) {
+            chown($file->getPathname(), $this->subsonicUser);
+            chgrp($file->getPathname(), "users");
+        }
+
+        // Rename file back to orignal name so that OMV will remove it.
+        rename($filepath, $params["filepath"]);
+
+        // Send a modify signal so that the user can trigger a restart.
+        //$dispatcher = &OMVNotifyDispatcher::getInstance();
+        //$dispatcher->notify(OMV_NOTIFY_MODIFY, $this->getEventMessagePath());
+        $subsonicModule->startService();
+    }
+
+    public function doCommand($params, $context)
+    {
+        // Validate the RPC caller context.
+        $this->validateMethodContext(
+            $context,
+            array( "role" => OMV_ROLE_ADMINISTRATOR )
+        );
+
+        // Validate the parameters of the RPC service method.
+        $this->validateMethodParams($params, '{
+            "type"       : "object",
+            "properties" : {
+                "command"  : { "type" : "string" }
+            }
+        }');
+
+        if (!in_array($params['command'], self::$commands))
+        {
             throw new OMVException(
-                OMVErrorMsg::E_CONFIG_GET_OBJECT_FAILED,
-                $xpath
+                OMVErrorMsg::E_MISC_OPERATION_DENIED,
+                sprinf("Unknown command - %s", $params['command'])
             );
         }
-
-        // Check if backup is present.
-        if (file_exists($backupPath)) {
-            // Create a background process.
-            $bgStatusFilename = $this->createBgProcStatus();
-            $pid = $this->fork();
-
-            // Parent process.
-            if ($pid > 0) {
-                $this->initializeBgProcStatus($bgStatusFilename, $pid);
-                return $bgStatusFilename;
-            }
-
-            // Delete current settings folder
-            rmdir($this->subsonicSettingsDir);
-
-            // Get the Subsonic module
-            $moduleMgr = &OMVModuleMgr::getInstance();
-            $subsonicModule = $moduleMgr->getModule($this->getName());
-
-            // Child process.
-            try {
-                $subsonicModule->stopService();
-                $bgOutputFilename = $this->createBgProcOutput();
-                $this->updateBgProcStatus(
-                    $bgStatusFilename,
-                    "outputfilename",
-                    $bgOutputFilename
-                );
-
-                $cmd = sprintf("tar -zxvf %s -C / 2>&1", $backupPath);
-
-                $this->exec($cmd, $output, $bgOutputFilename);
-                $this->finalizeBgProcStatus($bgStatusFilename, $output);
-                $subsonicModule->startService();
-                exit(0);
-            } catch (Exception $e) {
-                $this->finalizeBgProcStatus($bgStatusFilename, "", $e);
-                $subsonicModule->startService();
-                exit(1);
-            }
-        } else {
-            throw new OMVException(OMVErrorMsg::E_EXEC_MISC, "No backup found!");
-        }
-    }
-
-    public function doUpdateSuB($params, $context)
-    {
-        global $xmlConfig;
-
-        // Validate the RPC caller context.
-        $this->validateMethodContext($context, array(
-            "role" => OMV_ROLE_ADMINISTRATOR
-        ));
-
-        // Get the Subsonic module
-        $moduleMgr = &OMVModuleMgr::getInstance();
-        $subsonicModule = $moduleMgr->getModule($this->getName());
 
         // Create a background process.
         $bgStatusFilename = $this->createBgProcStatus();
         $pid = $this->fork();
-
-        // Parent process.
-        if ($pid > 0) {
+        if ($pid > 0)   // Parent process.
+        {
             $this->initializeBgProcStatus($bgStatusFilename, $pid);
             return $bgStatusFilename;
         }
 
         // Child process.
         try {
-            $subsonicModule->stopService();
             $bgOutputFilename = $this->createBgProcOutput();
-            $this->updateBgProcStatus(
-                $bgStatusFilename,
-                "outputfilename",
-                $bgOutputFilename
-            );
+            $this->updateBgProcStatus($bgStatusFilename, "outputfilename", $bgOutputFilename);
 
-            $cmd = sprintf("omv-mkconf %s update 2>&1", $this->getPluginName());
-
+            $cmd = sprintf("export LANG=C; omv-mkconf %s %s 2>&1", $this->getPluginName(), $params['command'] );
             $this->exec($cmd, $output, $bgOutputFilename);
             $this->finalizeBgProcStatus($bgStatusFilename, $output);
-            $subsonicModule->startService();
-            exit(0);
         } catch(Exception $e) {
             $this->finalizeBgProcStatus($bgStatusFilename, "", $e);
-            $subsonicModule->startService();
             exit(1);
         }
-
-        $dispatcher = &OMVNotifyDispatcher::getInstance();
-        $dispatcher->notify(
-            OMV_NOTIFY_MODIFY,
-            $this->getEventMessagePath(),
-            $object
-        );
-    }
-
-    public function doUpdateSuBB($params, $context)
-    {
-        global $xmlConfig;
-
-        // Validate the RPC caller context.
-        $this->validateMethodContext($context, array(
-            "role" => OMV_ROLE_ADMINISTRATOR
-        ));
-
-        // Get the Subsonic module
-        $moduleMgr = &OMVModuleMgr::getInstance();
-        $subsonicModule = $moduleMgr->getModule($this->getName());
-
-        // Create a background process.
-        $bgStatusFilename = $this->createBgProcStatus();
-        $pid = $this->fork();
-
-        // Parent process.
-        if ($pid > 0) {
-            $this->initializeBgProcStatus($bgStatusFilename, $pid);
-            return $bgStatusFilename;
-        }
-
-        // Child process.
-        try {
-            $subsonicModule->stopService();
-            $bgOutputFilename = $this->createBgProcOutput();
-            $this->updateBgProcStatus(
-                $bgStatusFilename,
-                "outputfilename",
-                $bgOutputFilename
-            );
-
-            $cmd = sprintf("omv-mkconf %s bupdate 2>&1", $this->getPluginName());
-
-            $this->exec($cmd, $output, $bgOutputFilename);
-            $this->finalizeBgProcStatus($bgStatusFilename, $output);
-            $subsonicModule->startService();
-            exit(0);
-        } catch(Exception $e) {
-            $this->finalizeBgProcStatus($bgStatusFilename, "", $e);
-            $subsonicModule->startService();
-            exit(1);
-        }
-
-        $dispatcher = &OMVNotifyDispatcher::getInstance();
-        $dispatcher->notify(
-            OMV_NOTIFY_MODIFY,
-            $this->getEventMessagePath(),
-            $object
-        );
-    }
-
-    private function getSharedFolderPathByUuid($uuid)
-    {
-        global $xmlConfig;
-
-        $xpath = sprintf("//system/shares/sharedfolder[uuid='%s']", $uuid);
-        $sharedFolder = $xmlConfig->get($xpath);
-        $sharedFolderRelDirPath = $sharedFolder["reldirpath"];
-
-        $xpath = sprintf(
-            "//system/fstab/mntent[uuid='%s']",
-            $sharedFolder["mntentref"]
-        );
-        $mountPoint = $xmlConfig->get($xpath);
-        $mountPointDir = $mountPoint["dir"];
-
-        return $mountPointDir . DIRECTORY_SEPARATOR . $sharedFolderRelDirPath;
     }
 }
 
 // Register the RPC service.
 $rpcServiceMgr = &OMVRpcServiceMgr::getInstance();
 $rpcServiceMgr->registerService(new OMVRpcServiceSubsonic());
+
 

@@ -18,6 +18,12 @@ fi
 wget http://sourceforge.net/projects/subsonic/files/subsonic/${ver1}/subsonic-${ver1}.deb -O /tmp/subsonic-${ver1}.deb
 dpkg --force-confnew -i /tmp/subsonic-${ver1}.deb
 rm -Rf /tmp/subsonic-${ver1}.deb
+if [ "$(omv_config_get "//services/subsonic/enable")" = "1" ]; then
+    /etc/init.d/subsonic restart > /dev/null 2>&1
+else
+    /etc/init.d/subsonic stop > /dev/null 2>&1
+fi
+echo "Done."
 }
 
 bupdate() {
@@ -28,6 +34,12 @@ fi
 wget http://sourceforge.net/projects/subsonic/files/subsonic/${ver1}/subsonic-${ver1}.deb -O /tmp/subsonic-${ver1}.deb
 dpkg --force-confnew -i /tmp/subsonic-${ver1}.deb
 rm -Rf /tmp/subsonic-${ver1}.deb
+if [ "$(omv_config_get "//services/subsonic/enable")" = "1" ]; then
+    /etc/init.d/subsonic restart > /dev/null 2>&1
+else
+    /etc/init.d/subsonic stop > /dev/null 2>&1
+fi
+echo "Done."
 }
 
 getsettings() {
@@ -41,7 +53,11 @@ msg="Current version is $ver2,"
 if [ "$ver2" = "" ]; then
     msg="No version is installed yet, click the update button for the version you require"
     xmlstarlet ed -L -u "//services/subsonic/update" -v 1 -n ${OMV_CONFIG_FILE}
-    xmlstarlet ed -L -u "//services/subsonic/bupdate" -v 1 -n ${OMV_CONFIG_FILE}
+    if [[ $ver4 > $ver1 ]]; then
+        xmlstarlet ed -L -u "//services/subsonic/bupdate" -v 1 -n ${OMV_CONFIG_FILE}
+    else
+        xmlstarlet ed -L -u "//services/subsonic/bupdate" -v 0 -n ${OMV_CONFIG_FILE}
+    fi
 else
     if [ "$ver1" != "$ver5" ]; then
         if [[ $ver1 > $ver5 ]]; then
@@ -121,10 +137,10 @@ fi
 }
 
 case "$2" in
-  update)
+  doUpdateSuB)
     update
     ;;
-  bupdate)
+  doUpdateSuBB)
     bupdate
     ;;
   getsettings)
@@ -133,4 +149,5 @@ case "$2" in
   *)
     exit 1
 esac
+
 
