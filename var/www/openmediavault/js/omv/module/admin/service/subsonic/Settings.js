@@ -20,7 +20,6 @@
 // require("js/omv/data/Store.js")
 // require("js/omv/data/Model.js")
 // require("js/omv/form/plugin/LinkedFields.js")
-// require("js/omv/module/admin/service/subsonic/Backup.js")
 
 Ext.define("OMV.module.admin.service.subsonic.Settings", {
     extend : "OMV.workspace.form.Panel",

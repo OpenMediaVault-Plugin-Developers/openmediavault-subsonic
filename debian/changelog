@@ -1,3 +1,9 @@
+openmediavault-subsonic (1.0.10) unstable; urgency=low
+
+  * Fixed typo
+
+ -- root <root@localhost.localdomain>  Sun, 12 Jul 2015 09:21:12 +0100
+
 openmediavault-subsonic (1.0.9) unstable; urgency=low
 
   * Fixed Show window during install
