@@ -253,8 +253,17 @@ Ext.define("OMV.module.admin.service.subsonic.Settings", {
             hideStopButton : true,
             listeners      : {
                 scope     : me,
+                finish    : function(wnd, response) {
+                    wnd.appendValue(_("Done..."));
+                    wnd.setButtonDisabled("close", false);
+                },
                 exception : function(wnd, error) {
                     OMV.MessageBox.error(null, error);
+                    wnd.setButtonDisabled("close", false);
+                },
+                close     : function() {
+                    me.doReload(); 
+                    OMV.MessageBox.hide();
                 }
             }
         }).show();

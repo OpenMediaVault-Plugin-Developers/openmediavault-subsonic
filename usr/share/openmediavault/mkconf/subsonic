@@ -10,42 +10,10 @@ OMV_SUB_CONFIG="/etc/default/subsonic"
 OMV_SUB_USER=subsonic
 OMV_SUB_PLUGIN_XPATH=//services/subsonic
 
-update() {
-ver1=`wget -q http://www.subsonic.org/pages/download.jsp -O - | \grep subsonic-[0-9].*.deb | \sed 's/.*href=\"\(.*\)\".*/\1/' | sed 's/^[^-]*=//' | sed 's/\(^subsonic\-\)\(.*\)\(\.deb\)/\2/'`
-if [ "$ver1" = "" ]; then
-    exit
-fi
-wget http://sourceforge.net/projects/subsonic/files/subsonic/${ver1}/subsonic-${ver1}.deb -O /tmp/subsonic-${ver1}.deb
-dpkg --force-confnew -i /tmp/subsonic-${ver1}.deb
-rm -Rf /tmp/subsonic-${ver1}.deb
-if [ "$(omv_config_get "//services/subsonic/enable")" = "1" ]; then
-    /etc/init.d/subsonic restart > /dev/null 2>&1
-else
-    /etc/init.d/subsonic stop > /dev/null 2>&1
-fi
-echo "Done."
-}
-
-bupdate() {
-ver1=`wget -q http://www.subsonic.org/pages/download.jsp -O - | \grep subsonic-[0-9].[0-9].beta[0-9].deb | \sed 's/.*href=\"\(.*\)\".*/\1/' | sed 's/^[^-]*=//' | sed 's/\(^subsonic\-\)\(.*\)\(\.deb\)/\2/'`
-if [ "$ver1" = "" ]; then
-    exit
-fi
-wget http://sourceforge.net/projects/subsonic/files/subsonic/${ver1}/subsonic-${ver1}.deb -O /tmp/subsonic-${ver1}.deb
-dpkg --force-confnew -i /tmp/subsonic-${ver1}.deb
-rm -Rf /tmp/subsonic-${ver1}.deb
-if [ "$(omv_config_get "//services/subsonic/enable")" = "1" ]; then
-    /etc/init.d/subsonic restart > /dev/null 2>&1
-else
-    /etc/init.d/subsonic stop > /dev/null 2>&1
-fi
-echo "Done."
-}
-
 getsettings() {
-ver1=`wget -q http://www.subsonic.org/pages/download.jsp -O - | \grep subsonic-[0-9].*.deb | \sed 's/.*href=\"\(.*\)\".*/\1/' | sed 's/^[^-]*=//' | sed 's/\(^subsonic\-\)\(.*\)\(\.deb\)/\2/'`
+ver1=`wget -q http://www.subsonic.org/pages/download.jsp -O - | \grep subsonic-.*.deb | grep -v "beta" | \sed 's/.*href=\"\(.*\)\".*/\1/' | sed 's/^[^-]*=//' | sed 's/\(^subsonic\-\)\(.*\)\(\.deb\)/\2/'`
 ver2=`grep -A 6 'Package: subsonic' /var/lib/dpkg/status | grep ^Version: | sed 's/^[^-]*: //'`
-ver3=`wget -q http://www.subsonic.org/pages/download.jsp -O - | \grep subsonic-[0-9]*beta[0-9].deb | \sed 's/.*href=\"\(.*\)\".*/\1/' | sed 's/^[^-]*=//' | sed 's/\(^subsonic\-\)\(.*\)\(\.deb\)/\2/'`
+ver3=`wget -q http://www.subsonic.org/pages/download.jsp -O - | \grep subsonic-.*.deb | grep "beta" | \sed 's/.*href=\"\(.*\)\".*/\1/' | sed 's/^[^-]*=//' | sed 's/\(^subsonic\-\)\(.*\)\(\.deb\)/\2/'`
 ver4="${ver3/beta/}"
 ver5="${ver2/beta/}"
 msg="Current version is $ver2,"
@@ -134,6 +102,36 @@ EOF
     nginx -s reload
 fi
 
+}
+
+update() {
+ver1=`wget -q http://www.subsonic.org/pages/download.jsp -O - | \grep subsonic-.*.deb | grep -v "beta" | \sed 's/.*href=\"\(.*\)\".*/\1/' | sed 's/^[^-]*=//' | sed 's/\(^subsonic\-\)\(.*\)\(\.deb\)/\2/'`
+if [ "$ver1" = "" ]; then
+    exit
+fi
+wget http://sourceforge.net/projects/subsonic/files/subsonic/${ver1}/subsonic-${ver1}.deb -O /tmp/subsonic-${ver1}.deb
+dpkg --force-confold -i /tmp/subsonic-${ver1}.deb
+rm -Rf /tmp/subsonic-${ver1}.deb
+if [ "$(omv_config_get "//services/subsonic/enable")" = "1" ]; then
+    /etc/init.d/subsonic restart > /dev/null 2>&1
+else
+    /etc/init.d/subsonic stop > /dev/null 2>&1
+fi
+}
+
+bupdate() {
+ver1=`wget -q http://www.subsonic.org/pages/download.jsp -O - | \grep subsonic-.*.deb | grep "beta" | \sed 's/.*href=\"\(.*\)\".*/\1/' | sed 's/^[^-]*=//' | sed 's/\(^subsonic\-\)\(.*\)\(\.deb\)/\2/'`
+if [ "$ver1" = "" ]; then
+    exit
+fi
+wget http://sourceforge.net/projects/subsonic/files/subsonic/${ver1}/subsonic-${ver1}.deb -O /tmp/subsonic-${ver1}.deb
+dpkg --force-confold -i /tmp/subsonic-${ver1}.deb
+rm -Rf /tmp/subsonic-${ver1}.deb
+if [ "$(omv_config_get "//services/subsonic/enable")" = "1" ]; then
+    /etc/init.d/subsonic restart > /dev/null 2>&1
+else
+    /etc/init.d/subsonic stop > /dev/null 2>&1
+fi
 }
 
 case "$2" in
