@@ -90,7 +90,7 @@ class OMVModuleSubsonic extends OMVModuleServiceAbstract implements
             }
 
             $systemCtl = new OMVSystemCtl($this->getPluginName());
-        $systemCtl->enable(true);
+            $systemCtl->enable(true);
         }
     }
 
