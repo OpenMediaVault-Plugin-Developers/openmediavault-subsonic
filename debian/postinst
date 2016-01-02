@@ -9,7 +9,7 @@ case "$1" in
     configure)
         # Set the default settings of the service package to those expected by
         # OpenMediaVault.
-        if [ -z "${2}" ]; then
+        if [ -z "${2}" ] && [ -f /etc/init.d/subsonic ]; then
             systemctl stop subsonic.service
             systemctl disable subsonic.service
         fi
