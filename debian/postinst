@@ -7,6 +7,13 @@ set -e
 
 case "$1" in
     configure)
+        # Set the default settings of the service package to those expected by
+        # OpenMediaVault.
+        if [ -z "${2}" ]; then
+            systemctl stop subsonic.service
+            systemctl disable subsonic.service
+        fi
+
         SERVICE_XPATH_NAME="subsonic"
         SERVICE_XPATH="/config/services/${SERVICE_XPATH_NAME}"
 
@@ -53,5 +60,7 @@ case "$1" in
         exit 1
     ;;
 esac
+
+#DEBHELPER#
 
 exit 0

@@ -43,7 +43,7 @@ class OMVRpcServiceSubsonic extends OMVRpcServiceAbstract
 
     private function getXpath()
     {
-        return sprintf("//services/%s", $this->getPluginName());
+        return sprintf("/config/services/%s", $this->getPluginName());
     }
 
     public function getName()
@@ -69,7 +69,7 @@ class OMVRpcServiceSubsonic extends OMVRpcServiceAbstract
             throw new OMVException(
                 OMVErrorMsg::E_EXEC_FAILED,
                 $cmd,
-                implode("\n", $output)
+                implode(PHP_EOL, $output)
             );
         }
 

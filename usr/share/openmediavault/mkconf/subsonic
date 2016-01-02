@@ -8,7 +8,7 @@ set -e
 export PATH=$PATH
 OMV_SUB_CONFIG="/etc/default/subsonic"
 OMV_SUB_USER=subsonic
-OMV_SUB_PLUGIN_XPATH=//services/subsonic
+OMV_SUB_PLUGIN_XPATH=/config/services/subsonic
 
 getsettings() {
 ver1=`wget -q http://www.subsonic.org/pages/download.jsp -O - | \grep subsonic-.*.deb | grep -v "beta" | \sed 's/.*href=\"\(.*\)\".*/\1/' | sed 's/^[^-]*=//' | sed 's/\(^subsonic\-\)\(.*\)\(\.deb\)/\2/'`
@@ -20,51 +20,53 @@ msg="Current version is $ver2,"
 
 if [ "$ver2" = "" ]; then
     msg="No version is installed yet, click the update button for the version you require"
-    xmlstarlet ed -L -u "//services/subsonic/update" -v 1 -n ${OMV_CONFIG_FILE}
+    xmlstarlet ed -L -u "${OMV_SUB_PLUGIN_XPATH}/update" -v "1" ${OMV_CONFIG_FILE}
+    sleep 1
     if [[ $ver4 > $ver1 ]]; then
-        xmlstarlet ed -L -u "//services/subsonic/bupdate" -v 1 -n ${OMV_CONFIG_FILE}
+        xmlstarlet ed -L -u "${OMV_SUB_PLUGIN_XPATH}/bupdate" -v "1" ${OMV_CONFIG_FILE}
     else
-        xmlstarlet ed -L -u "//services/subsonic/bupdate" -v 0 -n ${OMV_CONFIG_FILE}
+        xmlstarlet ed -L -u "${OMV_SUB_PLUGIN_XPATH}/bupdate" -v "0" ${OMV_CONFIG_FILE}
     fi
 else
-    if [ "$ver1" != "$ver5" ]; then
-        if [[ $ver1 > $ver5 ]]; then
-            xmlstarlet ed -L -u "//services/subsonic/update" -v 1 -n ${OMV_CONFIG_FILE}
+    if [ "$ver1" != "$ver2" ]; then
+        if [[ $ver1 < $ver5 ]]; then
+            xmlstarlet ed -L -u "${OMV_SUB_PLUGIN_XPATH}/update" -v "1" ${OMV_CONFIG_FILE}
             msg+=" $ver1 is available."
         else
-            xmlstarlet ed -L -u "//services/subsonic/update" -v 0 -n ${OMV_CONFIG_FILE}
+            xmlstarlet ed -L -u "${OMV_SUB_PLUGIN_XPATH}/update" -v "0" ${OMV_CONFIG_FILE}
             msg+=" there is no new update available."
         fi
     else
-        xmlstarlet ed -L -u "//services/subsonic/update" -v 0 -n ${OMV_CONFIG_FILE}
+        xmlstarlet ed -L -u "${OMV_SUB_PLUGIN_XPATH}/update" -v "0" ${OMV_CONFIG_FILE}
         msg+=" there is no new update available."
     fi
 
-    xmlstarlet ed -L -u "//services/subsonic/bupdate" -v 0 -n ${OMV_CONFIG_FILE}
+    xmlstarlet ed -L -u "${OMV_SUB_PLUGIN_XPATH}/bupdate" -v "0" ${OMV_CONFIG_FILE}
+    sleep 1
 
     if [[ $ver4 > $ver1 ]]; then
         if [ "$ver3" = "$ver2" ]; then
-            xmlstarlet ed -L -u "//services/subsonic/bupdate" -v 0 -n ${OMV_CONFIG_FILE}
+            xmlstarlet ed -L -u "${OMV_SUB_PLUGIN_XPATH}/bupdate" -v "0" ${OMV_CONFIG_FILE}
         else
-            xmlstarlet ed -L -u "//services/subsonic/bupdate" -v 1 -n ${OMV_CONFIG_FILE}
+            xmlstarlet ed -L -u "${OMV_SUB_PLUGIN_XPATH}/bupdate" -v "1" ${OMV_CONFIG_FILE}
             msg+=" $ver3 is available."
         fi
     fi
 fi
 
-xmlstarlet ed -L -u "//services/subsonic/msg" -v "$msg" -n ${OMV_CONFIG_FILE}
+xmlstarlet ed -L -u "${OMV_SUB_PLUGIN_XPATH}/msg" -v "$msg" ${OMV_CONFIG_FILE}
 
-if [ "$(omv_config_get "//services/subsonic/enable")" != "1" ]; then
+if [ "$(omv_config_get "${OMV_SUB_PLUGIN_XPATH}/enable")" != "1" ]; then
     exit 0
 fi
 
-if [ "$(omv_config_get "//services/subsonic/ssl")" != "1" ]; then
+if [ "$(omv_config_get "${OMV_SUB_PLUGIN_XPATH}/ssl")" != "1" ]; then
     encryption="port"
 else
     encryption="port=0 --https-port"
 fi
 
-if [ "$(omv_config_get "//services/subsonic/ppass")" != "1" ]; then
+if [ "$(omv_config_get "${OMV_SUB_PLUGIN_XPATH}/ppass")" != "1" ]; then
     pass=""
 else
     pass="--context-path=/subsonic "

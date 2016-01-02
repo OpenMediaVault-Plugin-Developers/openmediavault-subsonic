@@ -1,18 +1,20 @@
 Source: openmediavault-subsonic
 Section: net
-XB-Plugin-Section: multimedia
 Priority: optional
 Maintainer: OpenMediaVault Plugin Developers <plugins@omv-extras.org>
-Build-Depends: debhelper (>= 9 )
-Standards-Version: 3.9.3
+Build-Depends: debhelper (>= 9)
+Standards-Version: 3.9.6
+XB-Plugin-Section: multimedia
 
 Package: openmediavault-subsonic
 Architecture: all
-Depends: ${misc:Depends}, openmediavault (>= 1.0), 
- openjdk-8-jre | openjdk-7-jre | openjdk-6-jre, ffmpeg, lame
-Description: A web-based music streamer, jukebox and Podcast receiver
- Subsonic is a web-based music streamer, jukebox and Podcast receiver,
- providing access to your music collection wherever you are. Use it
- to share your music with friends, or to listen to your music while away
+Depends: openjdk-6-jre-headless | openjdk-7-jre-headless | openjdk-8-jre-headless,
+         ffmpeg,
+         lame,
+         openmediavault (>= 3.0),
+         ${misc:Depends}
+Homepage: http://www.subsonic.org/
+Description: Subsonic is a web-based music streamer, jukebox and Podcast receiver,
+ providing access to your music collection wherever you are.
+ Use it to share your music with friends, or to listen to your music while away
  from home.
-

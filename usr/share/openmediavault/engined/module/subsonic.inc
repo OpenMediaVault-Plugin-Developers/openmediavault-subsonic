@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Copyright (C) 2013-2015 OpenMediaVault Plugin Developers
+ * Copyright (C) 2014 OpenMediaVault Plugin Developers
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,8 +19,9 @@
 
 require_once "openmediavault/config.inc";
 require_once "openmediavault/error.inc";
-require_once "openmediavault/initscript.inc";
 require_once "openmediavault/module.inc";
+require_once "openmediavault/systemctl.inc";
+require_once "openmediavault/util.inc";
 
 class OMVModuleSubsonic extends OMVModuleServiceAbstract implements
     OMVINotifyListener,
@@ -39,7 +40,7 @@ class OMVModuleSubsonic extends OMVModuleServiceAbstract implements
 
     private function getXPath()
     {
-        return sprintf("//services/%s", $this->getPluginName());
+        return sprintf("/config/services/%s", $this->getPluginName());
     }
 
     public function getName()
@@ -60,13 +61,13 @@ class OMVModuleSubsonic extends OMVModuleServiceAbstract implements
             );
         }
 
-        $initd = new OMVSysVInitScript($this->getPluginName());
+        $systemCtl = new OMVSystemCtl($this->getPluginName());
 
         return array(
-            "name"    => $this->getPluginName(),
+            "name"    => $this->getName(),
             "title"   => gettext($this->getName()),
             "enabled" => boolval($object["enable"]),
-            "running" => $initd->status() == 0
+            "running" => $systemCtl->isActive()
         );
     }
 
@@ -88,16 +89,16 @@ class OMVModuleSubsonic extends OMVModuleServiceAbstract implements
                 return;
             }
 
-            $initd = new OMVSysVInitScript($this->getPluginName(), true);
-            $initd->exec();
+            $systemCtl = new OMVSystemCtl($this->getPluginName());
+        $systemCtl->enable(true);
         }
     }
 
     public function stopService()
     {
         if (file_exists('/etc/init.d/subsonic')) {
-            $initd = new OMVSysVInitScript($this->getPluginName());
-            $initd->exec();
+            $systemCtl = new OMVSystemCtl($this->getPluginName());
+            $systemCtl->disable(true);
         }
     }
 
