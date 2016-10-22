@@ -9,9 +9,9 @@ case "$1" in
     configure)
         # Set the default settings of the service package to those expected by
         # OpenMediaVault.
-        if [ -z "${2}" ] && [ -f /etc/init.d/subsonic ]; then
-            systemctl stop subsonic.service
-            systemctl disable subsonic.service
+        if [ -z "${2}" ] && [ -f /etc/systemd/system/subsonic.service ]; then
+            systemctl stop subsonic.service >/dev/null || true
+            systemctl disable subsonic.service >/dev/null || true
         fi
 
         SERVICE_XPATH_NAME="subsonic"
@@ -43,6 +43,10 @@ case "$1" in
             omv_config_add_element "${SERVICE_XPATH}" "bupdate" "0"
             omv_config_add_element "${SERVICE_XPATH}" "port" "4040"
             omv_config_add_element "${SERVICE_XPATH}" "msg" "Not Installed."
+        fi
+
+        if ! omv_config_exists "${SERVICE_XPATH}/fork"; then
+            omv_config_add_element "${SERVICE_XPATH}" "fork" "subsonic"
         fi
 
         # Activate package triggers. These triggers are only set during the

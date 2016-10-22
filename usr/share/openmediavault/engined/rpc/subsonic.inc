@@ -1,7 +1,8 @@
 <?php
 
 /**
- * Copyright (C) 2013-2015 OpenMediaVault Plugin Developers
+ * Copyright (C) 2010-2012 Ian Moore <imooreyahoo@gmail.com>
+ * Copyright (C) 2013-2015 OpenMediaVault Plugin Developers.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,34 +17,41 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+ //file_put_contents('filename.txt', print_r($b, true));
 
-require_once "openmediavault/config.inc";
-require_once "openmediavault/error.inc";
-require_once "openmediavault/notify.inc";
-require_once "openmediavault/object.inc";
-require_once "openmediavault/rpcservice.inc";
+namespace OMV\Engined\Rpc;
 
-class OMVRpcServiceSubsonic extends OMVRpcServiceAbstract
+use DateTime;
+use Exception;
+use OMV\Config\Database;
+use OMV\Engine\Notify\Dispatcher;
+use OMV\Rpc\ServiceAbstract;
+use OMV\Rpc\ServiceManager as RpcServiceManager;
+use OMV\System\Process;
+use SplFileObject;
+
+class Subsonic extends ServiceAbstract
 {
+    private $database;
+
+    private $dataModelPath = 'conf.service.subsonic';
+
+    private $dispatcher;
+
+    private $eventMessagePath = 'org.openmediavault.conf.services.subsonic';
 
     private static $commands = array("doUpdateSuB","doUpdateSuBB");
+	
     private $subsonicSettingsDir = "/var/subsonic/";
+	
     private $subsonicSettingsFile = "/var/subsonic/subsonic.properties";
+	
     private $subsonicUser = "subsonic";
 
-    private function getPluginName()
+    public function __construct(Database $database = null, Dispatcher $dispatcher = null)
     {
-        return strtolower($this->getName());
-    }
-
-    private function getEventMessagePath()
-    {
-        return sprintf("org.openmediavault.service.%s", $this->getPluginName());
-    }
-
-    private function getXpath()
-    {
-        return sprintf("/config/services/%s", $this->getPluginName());
+        $this->database = $database ?: Database::getInstance();
+        $this->dispatcher = $dispatcher ?: Dispatcher::getInstance();
     }
 
     public function getName()
@@ -63,111 +71,58 @@ class OMVRpcServiceSubsonic extends OMVRpcServiceAbstract
 
     public function getSettings($params, $context)
     {
-        $cmd = sprintf("omv-mkconf %s getsettings", $this->getPluginName());
+        $this->validateMethodContext($context, ['role' => OMV_ROLE_ADMINISTRATOR]);
 
-        if (0 !== $this->exec($cmd, $output)) {
-            throw new OMVException(
-                OMVErrorMsg::E_EXEC_FAILED,
-                $cmd,
-                implode(PHP_EOL, $output)
-            );
-        }
+        $object = $this->database->get($this->dataModelPath);
 
-        global $xmlConfig;
-
-        $this->validateMethodContext($context, array(
-            "role" => OMV_ROLE_ADMINISTRATOR
-        ));
-
-        $object = $xmlConfig->get($this->getXpath());
-
-        if (is_null($object)) {
-            throw new OMVException(
-                OMVErrorMsg::E_CONFIG_GET_OBJECT_FAILED,
-                $this->getXpath()
-            );
-        }
-
-        $object["enable"]  = boolval($object["enable"]);
-        $object["showtab"] = boolval($object["showtab"]);
-        $object["update"]  = boolval($object["update"]);
-        $object["bupdate"] = boolval($object["bupdate"]);
-        $object["ssl"]     = boolval($object["ssl"]);
-        $object["ppass"]   = boolval($object["ppass"]);
-        $object["port"]    = intval($object["port"]);
-
-        return $object;
+        return $object->getAssoc();
     }
 
     public function setSettings($params, $context)
     {
-        global $xmlConfig;
+        $this->validateMethodContext($context, ['role' => OMV_ROLE_ADMINISTRATOR]);
+        $this->validateMethodParams($params, 'rpc.subsonic.setsettings');
 
-        $this->validateMethodContext($context, array(
-            "role" => OMV_ROLE_ADMINISTRATOR
-        ));
-
-        $this->validateMethodParams(
-            $params,
-            '{
-                "type"       : "object",
-                "properties" : {
-                    "enable"    : { "type" : "boolean" },
-                    "showtab"   : { "type" : "boolean" },
-                    "update"    : { "type" : "boolean" },
-                    "bupdate"   : { "type" : "boolean" },
-                    "port"      : { "type" : "integer","minimum":1024,"maximum":65535},
-                    "ppass"     : { "type" : "boolean" },
-                    "ssl"       : { "type" : "boolean" },
-                    "msg"       : { "type" : "string", "optional" : true }
-                }
-            }'
-        );
+        // Get existing configuration object
+        $oldObject = $this->database->get($this->dataModelPath);
 
         // Run checks to verify sellected settings
-        if ($params["ssl"] == "1") {
-            if ($params["ppass"] == "1") {
-                throw new OMVException(
-                    OMVErrorMsg::E_MISC_FAILURE,
-                    "You can not enable both SSL and Proxy Pass."
-                );
+        if ($params['ssl'] == 1) {
+            if ($params['ppass'] == 1) {
+                throw new Exception('You can not enable both SSL and Proxy Pass.');
+            }
+            $db = \OMV\Config\Database::getInstance();
+            $getInfo = $db->getAssoc("conf.webadmin", $params['enablessl']);
+            $xSsl = $getInfo['enablessl'];
+            if ($xSsl == "1") {
+                throw new Exception('You have SSL enabled for the main UI, Do NOT enable it here as well.');
+            }
+
+            $getInfo = $db->getAssoc('conf.system.certificate.ssl');
+
+            if (! array_key_exists('uuid', $getInfo[0])) {
+                throw new Exception('You have not generated any SSL certificates.');
             }
         }
 
-        $object = array(
-            "enable"    => array_boolval($params, "enable"),
-            "showtab"   => array_boolval($params, "showtab"),
-            "update"    => array_boolval($params, "update"),
-            "bupdate"   => array_boolval($params, "bupdate"),
-            "port"      => $params["port"],
-            "ppass"     => array_boolval($params, "ppass"),
-            "ssl"       => array_boolval($params, "ssl"),
-            "msg"       => $params["msg"],
-        );
-
-        if (false === $xmlConfig->replace($this->getXpath(), $object)) {
-            throw new OMVException(
-                OMVErrorMsg::E_CONFIG_SET_OBJECT_FAILED,
-                $this->getXpath()
-            );
+        if ($params['showtab'] == 1 && $params['ppass'] != 1) {
+            if (! file_exists('/var/www/openmediavault/js/omv/module/admin/service/media/Media.js')) {
+                throw new Exception('Install links and add an entry or enable Proxy Pass to use the web tab.');
+            }
         }
 
-        $dispatcher = &OMVNotifyDispatcher::getInstance();
-        $dispatcher->notify(
-            OMV_NOTIFY_MODIFY,
-            $this->getEventMessagePath(),
-            $object
-        );
+        $oldObject->setAssoc($params);
 
-        return $object;
+        $this->database->set($oldObject);
+        $this->dispatcher->notify(OMV_NOTIFY_MODIFY, $this->eventMessagePath, $oldObject);
+
+        return $oldObject->getAssoc();
     }
 
     public function downloadBackup($params, $context)
     {
         // Validate the RPC caller context.
-        $this->validateMethodContext($context, array(
-            "role" => OMV_ROLE_EVERYONE
-        ));
+        $this->validateMethodContext($context, ['role' => OMV_ROLE_ADMINISTRATOR]);
 
         if (!file_exists("$this->subsonicSettingsFile")) {
             throw new OMVException(
@@ -327,9 +282,3 @@ class OMVRpcServiceSubsonic extends OMVRpcServiceAbstract
         }
     }
 }
-
-// Register the RPC service.
-$rpcServiceMgr = &OMVRpcServiceMgr::getInstance();
-$rpcServiceMgr->registerService(new OMVRpcServiceSubsonic());
-
-

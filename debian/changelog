@@ -1,3 +1,9 @@
+openmediavault-subsonic (3.1.1) stable; urgency=low
+
+  * OpenMediaVault 3 version
+
+ -- OpenMediaVault Plugin Developers <plugins@omv-extras.org>  Tue, 05 Apr 2016 18:50:26 -0000
+
 openmediavault-subsonic (3.1) stable; urgency=low
 
   * Changed dependency of OMV Package to = 3.0.13 to avoid accidental

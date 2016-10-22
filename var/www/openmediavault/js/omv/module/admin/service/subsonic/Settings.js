@@ -162,6 +162,22 @@ Ext.define("OMV.module.admin.service.subsonic.Settings", {
                 labelSeparator : ""
             },
             items : [{
+                xtype         : "combo",
+                name          : "fork",
+                fieldLabel    : _("Change Fork"),
+                queryMode     : "local",
+                store : [
+                    [ "SubSonic", _("SubSonic") ],
+                    [ "MusicCabinet", _("MusicCabinet") ],
+                    [ "Libresonic", _("Libresonic") ],
+                    [ "FutureSonic", _("FutureSonic") ],
+                    [ "Madsonic", _("Madsonic") ]
+                ],
+                editable      : false,
+                triggerAction : "all",
+                value         : "."
+            },{
+                
                 xtype      : "checkbox",
                 name       : "enable",
                 boxLabel   : _("Subsonic can take a few seconds to start."),

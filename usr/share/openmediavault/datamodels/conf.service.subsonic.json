@@ -1,0 +1,49 @@
+{
+	"type": "config",
+	"id": "conf.service.subsonic",
+	"title": "SubSonic",
+	"queryinfo": {
+		"xpath": "/config/services/subsonic",
+		"iterable": false
+	},
+	"properties": {
+		"enable": {
+			"type": "boolean",
+			"default": false
+		},
+		"showtab": {
+			"type": "boolean",
+			"default": false
+		},
+		"ssl": {
+			"type": "boolean",
+			"default": false
+		},
+		"ppass": {
+			"type": "boolean",
+			"default": false
+		},
+		"bupdate": {
+			"type": "boolean",
+			"default": false
+		},
+		"msg": {
+			"type": "string",
+			"default": "Not Installed."
+		},
+		"fork": {
+			"type": "string",
+			"default": "SubSonic"
+		},
+		"update": {
+			"type": "boolean",
+			"default": false
+		},
+		"port": {
+			"type": "integer",
+			"minimum": 1025,
+			"maximum": 65535,
+			"default": 4040
+		}
+	}
+}

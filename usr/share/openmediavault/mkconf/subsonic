@@ -4,7 +4,7 @@ set -e
 
 . /etc/default/openmediavault
 . /usr/share/openmediavault/scripts/helper-functions
-
+exit 0
 export PATH=$PATH
 OMV_SUB_CONFIG="/etc/default/subsonic"
 OMV_SUB_USER=subsonic

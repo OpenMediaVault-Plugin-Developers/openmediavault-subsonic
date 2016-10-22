@@ -1,0 +1,48 @@
+[{
+	"type": "rpc",
+	"id": "rpc.subsonic.setsettings",
+	"params": {
+		"type": "object",
+		"properties": {
+			"enable": {
+			    "type": "boolean",
+				"required": true
+			},
+			"showtab": {
+			    "type": "boolean",
+				"required": true
+			},
+			"ssl": {
+			    "type": "boolean",
+				"required": true
+			},
+			"ppass": {
+			    "type": "boolean",
+				"required": true
+			},
+		    "bupdate": {
+			    "type": "boolean",
+				"required": true
+            },
+			"update":{
+			    "type": "boolean",
+				"required": false
+			},
+			"fork": {
+			    "type": "string",
+				"enum": [ "SubSonic", "MusicCabinet", "Libresonic", "FutureSonic", "Madsonic" ],
+		        "required": true
+			},
+			"msg": {
+			    "type": "string",
+		        "optional": true
+			},
+		    "port": {
+			    "type": "integer",
+			    "minimum": 1,
+				"maximum": 65535,
+		        "required": true
+		    }
+		}
+	}
+}]
