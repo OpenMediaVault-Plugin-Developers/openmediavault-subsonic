@@ -36,17 +36,17 @@ case "$1" in
         fi
 
         if ! omv_config_exists "${SERVICE_XPATH}"; then
-            omv_config_add_element "/config/services" "${SERVICE_XPATH_NAME}"
-            omv_config_add_element "${SERVICE_XPATH}" "enable" "0"
-            omv_config_add_element "${SERVICE_XPATH}" "show_tab" "0"
-            omv_config_add_element "${SERVICE_XPATH}" "update" "0"
-            omv_config_add_element "${SERVICE_XPATH}" "bupdate" "0"
-            omv_config_add_element "${SERVICE_XPATH}" "port" "4040"
-            omv_config_add_element "${SERVICE_XPATH}" "msg" "Not Installed."
+            omv_config_add_node "/config/services" "${SERVICE_XPATH_NAME}"
+            omv_config_add_node_data "${SERVICE_XPATH}" "enable" "0"
+            omv_config_add_node_data "${SERVICE_XPATH}" "showtab" "0"
+            omv_config_add_node_data "${SERVICE_XPATH}" "update" "0"
+            omv_config_add_node_data "${SERVICE_XPATH}" "bupdate" "0"
+            omv_config_add_node_data "${SERVICE_XPATH}" "port" "4040"
+            omv_config_add_node_data "${SERVICE_XPATH}" "msg" "Not Installed."
         fi
 
         if ! omv_config_exists "${SERVICE_XPATH}/fork"; then
-            omv_config_add_element "${SERVICE_XPATH}" "fork" "subsonic"
+            omv_config_add_node_data "${SERVICE_XPATH}" "fork" "SubSonic"
         fi
 
         # Activate package triggers. These triggers are only set during the

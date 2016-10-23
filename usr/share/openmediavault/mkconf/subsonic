@@ -4,7 +4,10 @@ set -e
 
 . /etc/default/openmediavault
 . /usr/share/openmediavault/scripts/helper-functions
-exit 0
+
+#wget http://subsonic.org/download/subsonic-6.0-standalone.tar.gz
+#tar xf subsonic-6.0-standalone.tar.gz -C /var/subsonic
+
 export PATH=$PATH
 OMV_SUB_CONFIG="/etc/default/subsonic"
 OMV_SUB_USER=subsonic
@@ -147,7 +150,7 @@ case "$2" in
     getsettings
     ;;
   *)
-    exit 1
+    exit
 esac
 
 

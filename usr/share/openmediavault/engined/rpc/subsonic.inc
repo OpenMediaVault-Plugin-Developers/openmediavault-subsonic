@@ -73,6 +73,10 @@ class Subsonic extends ServiceAbstract
     {
         $this->validateMethodContext($context, ['role' => OMV_ROLE_ADMINISTRATOR]);
 
+        $cmd = new Process(sprintf("omv-mkconf %s getsettings", "subsonic"));
+        $cmd->setRedirect2to1();
+        $cmd->execute();
+
         $object = $this->database->get($this->dataModelPath);
 
         return $object->getAssoc();

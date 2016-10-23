@@ -44,6 +44,8 @@ class Subsonic extends ServiceAbstract implements
 
     private $serviceName = 'subsonic.service';
 
+    private $subsonicSettingsFile = "/var/subsonic/subsonic.properties33333";
+
     public function __construct(Database $database = null)
     {
         $this->database = $database ?: Database::getInstance();
@@ -67,12 +69,12 @@ class Subsonic extends ServiceAbstract implements
         ];
     }
 
-    public function applyConfig()
-    {
-        $cmd = new Process('omv-mkconf', $this->getName());
-        $cmd->setRedirect2to1();
-        $cmd->execute();
-    }
+    //public function applyConfig()
+    //{
+    //    $cmd = new Process(sprintf("omv-mkconf %s getsettings", $this->getPluginName()));
+    //    $cmd->setRedirect2to1();
+    //    $cmd->execute();
+    //}
 
     public function startService()
     {
@@ -86,8 +88,10 @@ class Subsonic extends ServiceAbstract implements
 
     public function stopService()
     {
-        $systemCtl = new SystemCtl($this->serviceName);
-        $systemCtl->disable(true);
+        if (file_exists($this->subsonicSettingsFile)) {
+            $systemCtl = new SystemCtl($this->serviceName);
+            $systemCtl->disable(true);
+        }
     }
 
     public function bindListeners(Dispatcher $dispatcher)

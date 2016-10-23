@@ -10,7 +10,7 @@ Package: openmediavault-subsonic
 Architecture: all
 Depends: openmediavault (>= 3.0.13),
          openjdk-6-jre-headless | openjdk-7-jre-headless | openjdk-8-jre-headless | openjdk-6-jre | openjdk-7-jre | openjdk-8-jre,
-         ffmpeg,
+         ffmpeg | libav-tools,
          lame,
          ${misc:Depends}
 Homepage: http://www.subsonic.org/

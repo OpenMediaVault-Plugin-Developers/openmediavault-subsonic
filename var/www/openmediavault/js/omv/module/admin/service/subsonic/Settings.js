@@ -175,7 +175,7 @@ Ext.define("OMV.module.admin.service.subsonic.Settings", {
                 ],
                 editable      : false,
                 triggerAction : "all",
-                value         : "."
+                value         : "SubSonic"
             },{
                 
                 xtype      : "checkbox",
