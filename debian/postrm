@@ -17,7 +17,7 @@ case "$1" in
         fi
 
         omv_config_delete "//services/subsonic"
-        if getent passwd sickbeard >/dev/null 2>&1; then
+        if getent passwd subsonic >/dev/null 2>&1; then
             userdel -rf subsonic > /dev/null 2>&1
         fi
 
